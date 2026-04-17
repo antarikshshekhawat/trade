@@ -18,6 +18,10 @@ app = Flask(__name__)
 @app.route("/")
 def home():
     return send_from_directory(".", "nse_alpha_scanner.html")
+@app.route("/scan")
+def scan():
+    signals = scan_market()
+    return jsonify(signals)
 
 _cache_lock = Lock()
 _cache: Dict[str, object] = {
