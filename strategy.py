@@ -243,21 +243,26 @@ def _build_priority_watch(provider: MarketDataProvider, symbol: str, category: s
         return item
     except Exception:
       # return even weak stocks instead of ignoring
-        return {
+ try:
+    last_close = float(last_row["close"])
+    score = float(_score_candidate(last_row))
+except:
+    return None   # fallback safety
+
+return {
     "ticker": symbol,
     "category": category,
     "pattern": "No Strong Signal",
-    "price": round(float(last_row["close"]), 2),
-    "entry": round(float(last_row["close"]), 2),
-    "target": round(float(last_row["close"]) * 1.02, 2),
-    "sl": round(float(last_row["close"]) * 0.98, 2),
+    "price": round(last_close, 2),
+    "entry": round(last_close, 2),
+    "target": round(last_close * 1.02, 2),
+    "sl": round(last_close * 0.98, 2),
     "rr": 1.0,
     "rr_text": "1:1",
     "sl_pct": -2.0,
     "target_pct": 2.0,
-    "candidate_score": _score_candidate(last_row),
+    "candidate_score": score,
 }
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # UPDATED scan_market — with persistence + market-awareness
@@ -338,7 +343,7 @@ def scan_market(
         if item["ticker"] in ipo_set:
             item["category"] = "ipo"
 
-   top = signals
+   top = signals[:200]   # max 200 stocks
     # STEP 6: Save cache
     if top:
         save_signals_cache(top)
