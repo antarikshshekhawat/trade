@@ -10,106 +10,106 @@ import pandas as pd
 import yfinance as yf
 
 
+# ─────────────────────────────────────────
+# INDEX DATA SOURCES
+# ─────────────────────────────────────────
 INDEX_URLS = {
     "largecap": "https://niftyindices.com/IndexConstituent/ind_nifty50list.csv",
     "midcap": "https://niftyindices.com/IndexConstituent/ind_niftymidcap100list.csv",
     "smallcap": "https://niftyindices.com/IndexConstituent/ind_niftysmallcap100list.csv",
 }
 
+
+# ─────────────────────────────────────────
+# STRONG FALLBACK (VERY IMPORTANT)
+# ─────────────────────────────────────────
 FALLBACK_UNIVERSE = {
     "largecap": [
-        "RELIANCE",
-        "TCS",
-        "HDFCBANK",
-        "ICICIBANK",
-        "INFY",
-        "HINDUNILVR",
-        "SBIN",
-        "BHARTIARTL",
-        "ITC",
-        "LT",
+        "RELIANCE","TCS","INFY","HDFCBANK","ICICIBANK","LT","SBIN",
+        "ITC","AXISBANK","BAJFINANCE","ASIANPAINT","KOTAKBANK",
+        "MARUTI","HCLTECH","WIPRO","ULTRACEMCO","SUNPHARMA",
+        "TITAN","NTPC","POWERGRID","ADANIENT","ADANIPORTS",
+        "BAJAJFINSV","TECHM","GRASIM","JSWSTEEL","HDFCLIFE"
     ],
+
     "midcap": [
-        "POLYCAB",
-        "PERSISTENT",
-        "COFORGE",
-        "MPHASIS",
-        "BHEL",
-        "NHPC",
-        "IDFCFIRSTB",
-        "LUPIN",
-        "INDHOTEL",
-        "SUPREMEIND",
+        "POLYCAB","PERSISTENT","COFORGE","MPHASIS","BHEL","NHPC",
+        "IDFCFIRSTB","LUPIN","INDHOTEL","SUPREMEIND",
+        "CUMMINSIND","DIXON","AUBANK","ASTRAL","PIIND",
+        "PAGEIND","SRF","NAVINFLUOR","ALKEM","GODREJPROP"
     ],
+
     "smallcap": [
-        "IRB",
-        "JUBLINGREA",
-        "FSL",
-        "KNRCON",
-        "RKFORGE",
-        "RAIN",
-        "TRITURBINE",
-        "FCL",
-        "WELCORP",
-        "KPIGREEN",
+        "IRB","JUBLINGREA","FSL","KNRCON","RKFORGE","RAIN",
+        "TRITURBINE","FCL","WELCORP","KPIGREEN",
+        "RVNL","IRFC","NBCC","HFCL","SJVN",
+        "MAHSEAMLES","KSB","GMRINFRA","RITES","BEML"
     ],
 }
 
+
 FALLBACK_IPO_STOCKS = [
-    "TATATECH",
-    "AWL",
-    "MEDANTA",
-    "MANKIND",
-    "IREDA",
-    "DOMS",
-    "ZOMATO",
-    "NYKAA",
-    "PAYTM",
-    "LATENTVIEW",
+    "TATATECH","AWL","MEDANTA","MANKIND","IREDA",
+    "DOMS","ZOMATO","NYKAA","PAYTM","LATENTVIEW"
 ]
 
 
+# ─────────────────────────────────────────
+# HELPERS
+# ─────────────────────────────────────────
 def _clean_symbol(symbol: str) -> str:
-    symbol = str(symbol).strip().upper()
-    if not symbol:
-        return ""
-    return symbol.replace(".NS", "")
+    return str(symbol).strip().upper().replace(".NS", "")
 
 
 def _to_nse_ticker(symbol: str) -> str:
     symbol = _clean_symbol(symbol)
-    if not symbol:
-        return ""
-    return f"{symbol}.NS"
+    return f"{symbol}.NS" if symbol else ""
 
 
+# ─────────────────────────────────────────
+# FETCH INDEX DATA
+# ─────────────────────────────────────────
 def _load_index_symbols(url: str) -> List[str]:
     try:
-        with urlopen(url, timeout=5) as response:
+        with urlopen(url, timeout=8) as response:
             raw_csv = response.read().decode("utf-8", errors="ignore")
-        frame = pd.read_csv(StringIO(raw_csv))
-        candidate_columns = ["Symbol", "SYMBOL", "Ticker", "ticker"]
-        for column in candidate_columns:
-            if column in frame.columns:
-                symbols = [_clean_symbol(item) for item in frame[column].dropna().tolist()]
-                return sorted(set([item for item in symbols if item]))
+
+        df = pd.read_csv(StringIO(raw_csv))
+
+        for col in ["Symbol", "SYMBOL", "Ticker"]:
+            if col in df.columns:
+                return sorted(set(
+                    _clean_symbol(x) for x in df[col].dropna().tolist()
+                ))
     except Exception:
         return []
+
     return []
 
 
+# ─────────────────────────────────────────
+# BUILD STOCK UNIVERSE (CORE FUNCTION)
+# ─────────────────────────────────────────
 def build_stock_universe() -> Dict[str, List[str]]:
     universe = {}
+
     for category, url in INDEX_URLS.items():
-        live_symbols = _load_index_symbols(url)
-        if live_symbols:
-            universe[category] = live_symbols
+        symbols = _load_index_symbols(url)
+
+        if symbols:
+            print(f"[DATA] Loaded {len(symbols)} {category} stocks from NSE")
+            universe[category] = symbols
         else:
+            print(f"[DATA] Using fallback for {category}")
             universe[category] = FALLBACK_UNIVERSE[category]
+
     universe["ipo"] = FALLBACK_IPO_STOCKS
     return universe
 
 
+# ─────────────────────────────────────────
+# DATA STRUCTURE
+# ─────────────────────────────────────────
 @dataclass
 class StockRecord:
     symbol: str
@@ -117,68 +117,61 @@ class StockRecord:
 
 
 def flatten_universe(universe: Dict[str, List[str]]) -> List[StockRecord]:
-    records: List[StockRecord] = []
+    records = []
     for category, symbols in universe.items():
-        for symbol in symbols:
-            cleaned = _clean_symbol(symbol)
+        for s in symbols:
+            cleaned = _clean_symbol(s)
             if cleaned:
-                records.append(StockRecord(symbol=cleaned, category=category))
+                records.append(StockRecord(cleaned, category))
     return records
 
 
+# ─────────────────────────────────────────
+# DATA PROVIDERS
+# ─────────────────────────────────────────
 class MarketDataProvider(ABC):
     @abstractmethod
     def get_ohlc(self, symbol: str, period: str = "8mo", interval: str = "1d") -> pd.DataFrame:
-        raise NotImplementedError
+        pass
 
 
 class YFinanceDataProvider(MarketDataProvider):
     def get_ohlc(self, symbol: str, period: str = "8mo", interval: str = "1d") -> pd.DataFrame:
         ticker = _to_nse_ticker(symbol)
+
         if not ticker:
             return pd.DataFrame()
+
         try:
-            frame = yf.download(
-                tickers=ticker,
+            df = yf.download(
+                ticker,
                 period=period,
                 interval=interval,
-                auto_adjust=False,
                 progress=False,
-                threads=False,
+                threads=False
             )
         except Exception:
             return pd.DataFrame()
 
-        if frame.empty:
+        if df.empty:
             return pd.DataFrame()
 
-        if isinstance(frame.columns, pd.MultiIndex):
-            frame.columns = [str(col[0]).lower() for col in frame.columns]
-        else:
-            frame = frame.rename(columns=str.lower)
+        df = df.rename(columns=str.lower)
 
-        required_cols = {"open", "high", "low", "close", "volume"}
-        if not required_cols.issubset(frame.columns):
+        required = {"open","high","low","close","volume"}
+        if not required.issubset(df.columns):
             return pd.DataFrame()
 
-        frame = frame[list(required_cols)].dropna().copy()
-        if frame.empty:
-            return pd.DataFrame()
-        return frame
+        return df[list(required)].dropna()
 
 
 class BrokerRealtimeProvider(MarketDataProvider):
-    """
-    Placeholder provider for future broker integrations:
-    - Zerodha Kite historical + LTP streams
-    - Angel One SmartAPI
-    - Upstox
-    """
-
-    def get_ohlc(self, symbol: str, period: str = "8mo", interval: str = "1d") -> pd.DataFrame:
-        raise NotImplementedError("Implement broker API bridge for live market data.")
+    def get_ohlc(self, symbol: str, period="8mo", interval="1d") -> pd.DataFrame:
+        raise NotImplementedError("Use broker API here later")
 
 
+# ─────────────────────────────────────────
+# DEFAULT PROVIDER
+# ─────────────────────────────────────────
 def get_default_provider() -> MarketDataProvider:
     return YFinanceDataProvider()
-
