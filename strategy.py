@@ -154,7 +154,7 @@ def _mover_score(df: pd.DataFrame) -> Optional[float]:
 
 def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Optional[Dict]:
     try:
-        frame = provider.get_ohlc(symbol=symbol, period="8mo", interval="1d")
+        frame = provider.get_ohlc(symbol=symbol, period="4mo", interval="1d")
         if frame.empty or len(frame) < 35:
             return None
 
@@ -241,29 +241,31 @@ def _build_priority_watch(provider: MarketDataProvider, symbol: str, category: s
         item["candidate_score"] = float(_score_candidate(row)) + 1.0
         item["mover_5d_pct"] = float(_mover_score(frame) or 0.0)
         return item
+
     except Exception:
-      # return even weak stocks instead of ignoring
- try:
-    last_close = float(last_row["close"])
-    score = float(_score_candidate(last_row))
-except:
-    return None   # fallback safety
+        return None
 
-return {
-    "ticker": symbol,
-    "category": category,
-    "pattern": "No Strong Signal",
-    "price": round(last_close, 2),
-    "entry": round(last_close, 2),
-    "target": round(last_close * 1.02, 2),
-    "sl": round(last_close * 0.98, 2),
-    "rr": 1.0,
-    "rr_text": "1:1",
-    "sl_pct": -2.0,
-    "target_pct": 2.0,
-    "candidate_score": score,
-}
+    # SAFE fallback (NO SIGNAL CASE)
+    try:
+        last_close = float(last_row["close"])
+        score = float(_score_candidate(last_row))
+    except:
+        return None
 
+    return {
+        "ticker": symbol,
+        "category": category,
+        "pattern": "No Strong Signal",
+        "price": round(last_close, 2),
+        "entry": round(last_close, 2),
+        "target": round(last_close * 1.02, 2),
+        "sl": round(last_close * 0.98, 2),
+        "rr": 1.0,
+        "rr_text": "1:1",
+        "sl_pct": -2.0,
+        "target_pct": 2.0,
+        "candidate_score": score,
+    }
 # ─────────────────────────────────────────────────────────────────────────────
 # UPDATED scan_market — with persistence + market-awareness
 # ─────────────────────────────────────────────────────────────────────────────
@@ -271,7 +273,7 @@ return {
 def scan_market(
     provider: MarketDataProvider,
     categorized_stocks: Dict[str, List[str]],
-    max_workers: int = 20,
+    max_workers: int = 5,
     max_signals: int = 30,
     scan_timeout_sec: int = 25,
 ) -> List[Dict]:
@@ -343,7 +345,7 @@ def scan_market(
         if item["ticker"] in ipo_set:
             item["category"] = "ipo"
 
-   top = signals[:200]   # max 200 stocks
+       top = signals[:100]  # max 200 stocks
     # STEP 6: Save cache
     if top:
         save_signals_cache(top)
