@@ -242,7 +242,21 @@ def _build_priority_watch(provider: MarketDataProvider, symbol: str, category: s
         item["mover_5d_pct"] = float(_mover_score(frame) or 0.0)
         return item
     except Exception:
-        return None
+      # return even weak stocks instead of ignoring
+        return {
+    "ticker": symbol,
+    "category": category,
+    "pattern": "No Strong Signal",
+    "price": round(float(last_row["close"]), 2),
+    "entry": round(float(last_row["close"]), 2),
+    "target": round(float(last_row["close"]) * 1.02, 2),
+    "sl": round(float(last_row["close"]) * 0.98, 2),
+    "rr": 1.0,
+    "rr_text": "1:1",
+    "sl_pct": -2.0,
+    "target_pct": 2.0,
+    "candidate_score": _score_candidate(last_row),
+}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -324,8 +338,7 @@ def scan_market(
         if item["ticker"] in ipo_set:
             item["category"] = "ipo"
 
-    top = signals[:max_signals]
-
+   top = signals
     # STEP 6: Save cache
     if top:
         save_signals_cache(top)
