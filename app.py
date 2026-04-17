@@ -119,18 +119,26 @@ def _get_signals_cached() -> Dict[str, object]:
 def _normalize_signal(item: Dict) -> Dict:
     ticker = str(item.get("ticker") or item.get("symbol") or "UNKNOWN")
     category = str(item.get("category") or "largecap")
+
     entry = float(item.get("entry") or item.get("price") or 100.0)
     price = float(item.get("price") or entry)
+
     sl = float(item.get("sl") or item.get("stop_loss") or round(entry * 0.97, 2))
     target = float(item.get("target") or round(entry * 1.06, 2))
+
     rr_val = item.get("rr") if item.get("rr") is not None else item.get("risk_reward")
     rr = float(rr_val) if rr_val is not None else round((target - entry) / max(entry - sl, 0.01), 2)
     rr_text = str(item.get("rr_text") or f"1:{rr}")
+
     sl_pct = float(item.get("sl_pct") if item.get("sl_pct") is not None else round((sl / entry - 1) * 100, 2))
     target_pct = float(
         item.get("target_pct") if item.get("target_pct") is not None else round((target / entry - 1) * 100, 2)
     )
+
     pattern = str(item.get("pattern") or "MACD + RSI")
+
+    # ✅ ADD THIS LINE
+    last_close = float(item.get("last_close") or item.get("prev_close") or entry)
 
     return {
         "ticker": ticker,
@@ -144,6 +152,9 @@ def _normalize_signal(item: Dict) -> Dict:
         "category": category,
         "sl_pct": round(sl_pct, 2),
         "target_pct": round(target_pct, 2),
+
+        # ✅ ADD THIS FIELD
+        "last_close": round(last_close, 2),
     }
 
 
