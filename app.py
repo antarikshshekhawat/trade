@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from threading import Lock, Thread
 from typing import Dict, List
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_from_directory
 
 from data import FALLBACK_IPO_STOCKS, FALLBACK_UNIVERSE, build_stock_universe, get_default_provider
 from strategy import scan_market
@@ -14,6 +14,10 @@ from cache_utils import get_cache_meta, is_market_open, load_signals_cache
 # ─────────────────────────────────────────────────────────────────────────────
 
 app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return send_from_directory(".", "nse_alpha_scanner.html")
 
 _cache_lock = Lock()
 _cache: Dict[str, object] = {
