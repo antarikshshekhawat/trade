@@ -288,17 +288,16 @@ def scan_market(
         # (data.py will return the last daily close even outside market hours)
 
     # ── STEP 2: Attempt live scan ─────────────────────────────────────────────
-    all_symbols = _fetch_all_nse_symbols()
-    if not all_symbols:
-        all_symbols = sorted(
-            set(
-                str(symbol).strip().upper().replace(".NS", "")
-                for symbols in categorized_stocks.values()
-                for symbol in symbols
-                if str(symbol).strip()
-            )
-        )
-    all_symbols = sorted(set(all_symbols + PRIORITY_SYMBOLS))
+# ✅ USE ONLY YOUR STRUCTURED UNIVERSE
+all_symbols = []
+
+for category, stocks in categorized_stocks.items():
+    for s in stocks:
+        all_symbols.append((s, category))
+
+# Add priority stocks as smallcap if not present
+for s in PRIORITY_SYMBOLS:
+    all_symbols.append((s, "smallcap"))
 
     if not all_symbols:
         cached = load_signals_cache()
@@ -319,14 +318,7 @@ def scan_market(
     movers: List[Tuple[float, Dict]] = []
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        jobs = [
-            executor.submit(
-                scan_symbol,
-                provider,
-                symbol,
-                category_map.get(symbol, "smallcap"),
-            )
-            for symbol in all_symbols
+jobs = [exe.submit(scan_symbol, provider, s, cat) for (s, cat) in all_symbols]
         ]
         done_jobs = jobs
         try:
