@@ -9,13 +9,12 @@ from urllib.request import urlopen
 
 from data import MarketDataProvider
 
-# ── NEW: import persistence helpers ──────────────────────────────────────────
+# ── PERSISTENCE HELPERS ──────────────────────────────────────────────────────
 from cache_utils import (
     is_market_open,
     load_signals_cache,
     save_signals_cache,
 )
-# ─────────────────────────────────────────────────────────────────────────────
 
 NSE_ALL_STOCKS_CSV = "https://archives.nseindia.com/content/equities/EQUITY_L.csv"
 PRIORITY_SYMBOLS = [
@@ -26,6 +25,7 @@ PRIORITY_SYMBOLS = [
     "FIRSTSOURCE",
 ]
 
+# ── CORE UTILITIES ───────────────────────────────────────────────────────────
 
 def _prepare_indicators(frame: pd.DataFrame) -> pd.DataFrame:
     """Calculates technical indicators and cleans data."""
@@ -33,7 +33,6 @@ def _prepare_indicators(frame: pd.DataFrame) -> pd.DataFrame:
         return frame
     
     df = frame.copy()
-    # Ensure numeric types for calculations
     for col in ["open", "high", "low", "close", "volume"]:
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
@@ -43,53 +42,37 @@ def _prepare_indicators(frame: pd.DataFrame) -> pd.DataFrame:
     df["atr14"] = ta.atr(df["high"], df["low"], df["close"], length=14)
     df["vol_sma20"] = ta.sma(df["volume"], length=20)
     
-    # Previous 20-day high (exclude current candle to detect breakout)
     df["high20_prev"] = df["high"].rolling(window=20).max().shift(1)
 
     macd = ta.macd(df["close"], fast=12, slow=26, signal=9)
     if macd is not None and not macd.empty:
         hist_col = [col for col in macd.columns if "MACDh" in col]
-        if hist_col:
-            df["macdh"] = macd[hist_col[0]]
-        else:
-            df["macdh"] = pd.NA
+        df["macdh"] = macd[hist_col[0]] if hist_col else pd.NA
     else:
         df["macdh"] = pd.NA
         
     return df.dropna().copy()
 
 
-def _fetch_all_nse_symbols() -> List[str]:
-    """Fetches full list of equity symbols from NSE."""
-    try:
-        with urlopen(NSE_ALL_STOCKS_CSV, timeout=10) as response:
-            csv_text = response.read().decode("utf-8", errors="ignore")
-        frame = pd.read_csv(StringIO(csv_text))
-        if "SYMBOL" not in frame.columns:
-            return []
-        symbols = (
-            frame["SYMBOL"]
-            .dropna()
-            .astype(str)
-            .str.strip()
-            .str.upper()
-            .replace(r"\.NS$", "", regex=True)
-            .tolist()
-        )
-        return sorted(set([s for s in symbols if s]))
-    except Exception:
-        return []
+def _score_candidate(row: pd.Series) -> float:
+    """Improved scoring function with base score and technical weights."""
+    ema20 = float(row["ema20"])
+    ema50 = float(row["ema50"])
+    macdh = float(row["macdh"])
+    rsi14 = float(row["rsi14"])
+    
+    score = 50.0
 
+    if ema20 > ema50:
+        score += 15
+    if macdh > 0:
+        score += 15
+    if 45 <= rsi14 <= 65:
+        score += 10
 
-def _build_category_map(categorized_stocks: Dict[str, List[str]]) -> Dict[str, str]:
-    """Flattens category dictionary to a symbol -> category lookup."""
-    category_map: Dict[str, str] = {}
-    for category, symbols in categorized_stocks.items():
-        for symbol in symbols:
-            clean = str(symbol).strip().upper().replace(".NS", "")
-            if clean:
-                category_map[clean] = category
-    return category_map
+    score += min(max(macdh * 50, 0), 10)
+
+    return round(score, 2)
 
 
 def _rr_format(entry: float, sl: float, target: float) -> Tuple[Optional[float], Optional[str]]:
@@ -97,7 +80,7 @@ def _rr_format(entry: float, sl: float, target: float) -> Tuple[Optional[float],
     risk = abs(entry - sl)
     reward = abs(target - entry)
     if risk <= 0 or reward <= 0:
-        return None, None
+        return 1.0, "1:1"
     rr = reward / risk
     return round(rr, 2), f"1:{round(rr, 2)}"
 
@@ -133,28 +116,6 @@ def _build_signal(ticker: str, category: str, row: pd.Series, pattern: str) -> D
     }
 
 
-def _score_candidate(row: pd.Series) -> float:
-    """Scores a setup based on technical strength."""
-    ema20 = float(row["ema20"])
-    ema50 = float(row["ema50"])
-    macdh = float(row["macdh"])
-    rsi14 = float(row["rsi14"])
-    close = float(row["close"])
-
-    score = 0.0
-    if ema20 > ema50:
-        score += 1.5
-    if macdh > 0:
-        score += 1.5
-    if 40 <= rsi14 <= 70:
-        score += 1.0
-
-    score += min(max(macdh * 10, 0), 2)
-    ema_gap = ema20 - ema50
-    score += min(max(ema_gap / max(close, 1) * 100, 0), 2)
-    return round(score, 4)
-
-
 def _mover_score(df: pd.DataFrame) -> Optional[float]:
     """Calculates 5-day price movement percentage."""
     if df.empty or len(df) < 8:
@@ -162,13 +123,12 @@ def _mover_score(df: pd.DataFrame) -> Optional[float]:
     close = df["close"].astype(float)
     last = float(close.iloc[-1])
     prev = float(close.iloc[-6])
-    if prev <= 0:
-        return None
-    return round((last / prev - 1) * 100, 3)
+    return round((last / prev - 1) * 100, 3) if prev > 0 else None
 
+# ── SCANNING LOGIC ───────────────────────────────────────────────────────────
 
 def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Optional[Dict]:
-    """Analyzes a single symbol for technical patterns."""
+    """Analyzes symbol and returns signal or safe fallback for non-signals."""
     try:
         frame = provider.get_ohlc(symbol=symbol, period="4mo", interval="1d")
         if frame is None or frame.empty or len(frame) < 35:
@@ -201,21 +161,19 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
         last_volume = float(last_row["volume"])
         vol_sma20 = float(last_row["vol_sma20"])
         
-        # Pattern 1: Momentum Breakout
-        breakout_ok = last_close >= high20_prev and vol_sma20 > 0 and last_volume >= 2.0 * vol_sma20
-
-        if breakout_ok:
+        # 1. Momentum Breakout
+        if last_close >= high20_prev and vol_sma20 > 0 and last_volume >= 2.0 * vol_sma20:
             breakout = _build_signal(symbol, category, last_row, "Momentum Breakout")
-            breakout["candidate_score"] = float(_score_candidate(last_row)) + 2.0
+            breakout["candidate_score"] = float(_score_candidate(last_row)) + 20.0
             breakout["is_candidate"] = True
             breakout["mover_5d_pct"] = float(_mover_score(frame) or 0.0)
             return breakout
 
-        # Pattern 2: MACD Reversal
+        # 2. MACD Reversal
         if macd_cross_up and rsi_ok and ema_trend_ok:
             return _build_signal(symbol, category, last_row, "MACD Cross + RSI Zone + EMA Trend")
 
-        # Pattern 3: Trend Continuation Candidate
+        # 3. Trend Continuation Candidate
         if ema_trend_ok and last_macdh > 0 and 38 <= last_rsi <= 72:
             candidate = _build_signal(symbol, category, last_row, "Momentum Trend Candidate")
             candidate["candidate_score"] = float(_score_candidate(last_row))
@@ -224,29 +182,30 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
             if mover is not None:
                 candidate["mover_5d_pct"] = float(mover)
             return candidate
-            
-    except Exception:
-        return None
-    return None
 
+        # --- SAFE FALLBACK FOR ALL OTHER STOCKS ---
+        try:
+            current_close = float(last_row["close"])
+            current_score = float(_score_candidate(last_row))
+        except:
+            return None
 
-def _build_priority_watch(provider: MarketDataProvider, symbol: str, category: str) -> Optional[Dict]:
-    """Special scanner for high-priority watchlist stocks."""
-    try:
-        frame = provider.get_ohlc(symbol=symbol, period="8mo", interval="1d")
-        if frame is None or frame.empty or len(frame) < 35:
-            return None
-        
-        df = _prepare_indicators(frame)
-        if df.empty:
-            return None
+        return {
+            "ticker": symbol,
+            "category": category,
+            "pattern": "No Strong Signal",
+            "price": round(current_close, 2),
+            "entry": round(current_close, 2),
+            "target": round(current_close * 1.02, 2),
+            "sl": round(current_close * 0.98, 2),
+            "rr": 1.0,
+            "rr_text": "1:1",
+            "sl_pct": -2.0,
+            "target_pct": 2.0,
+            "candidate_score": current_score,
+            "is_candidate": False
+        }
             
-        row = df.iloc[-1]
-        item = _build_signal(symbol, category, row, "Priority Momentum Watch")
-        item["is_candidate"] = True
-        item["candidate_score"] = float(_score_candidate(row)) + 1.0
-        item["mover_5d_pct"] = float(_mover_score(frame) or 0.0)
-        return item
     except Exception:
         return None
 
@@ -258,12 +217,9 @@ def scan_market(
     max_signals: int = 30,
     scan_timeout_sec: int = 25,
 ) -> List[Dict]:
-    """Orchestrates the market-wide scanning process."""
+    """Orchestrates market-wide scanning returning all stocks ranked by score."""
     
-    market_open = is_market_open()
-
-    # STEP 1: If market closed, try to load from cache
-    if not market_open:
+    if not is_market_open():
         cached = load_signals_cache()
         if cached and cached.get("signals"):
             for sig in cached["signals"]:
@@ -271,78 +227,50 @@ def scan_market(
                 sig["_cache_last_updated"] = cached.get("last_updated", "")
             return cached["signals"]
 
-    # STEP 2: Build a unique symbol list to avoid duplicate work
     symbol_tasks = {}
     for category, stocks in categorized_stocks.items():
         for s in stocks:
             clean_s = str(s).strip().upper().replace(".NS", "")
-            if clean_s and clean_s not in symbol_tasks:
-                symbol_tasks[clean_s] = category
+            if clean_s: symbol_tasks[clean_s] = category
 
     for s in PRIORITY_SYMBOLS:
         clean_s = str(s).strip().upper().replace(".NS", "")
-        # Priority stocks take precedence in categorization if not already present
         if clean_s not in symbol_tasks:
             symbol_tasks[clean_s] = "smallcap"
 
     if not symbol_tasks:
         return []
 
-    ipo_set = set(
-        str(symbol).strip().upper().replace(".NS", "")
-        for symbol in categorized_stocks.get("ipo", [])
-    )
-
+    ipo_set = set(str(s).strip().upper().replace(".NS", "") for s in categorized_stocks.get("ipo", []))
     signals = []
 
-    # STEP 3: Execute parallel scanning
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_symbol = {
             executor.submit(scan_symbol, provider, s, cat): s 
             for s, cat in symbol_tasks.items()
         }
-
         done, pending = wait(future_to_symbol.keys(), timeout=scan_timeout_sec)
-
-        for future in pending:
-            future.cancel()
-
-        for future in done:
+        for f in pending: f.cancel()
+        for f in done:
             try:
-                result = future.result()
-                if result:
-                    signals.append(result)
-            except Exception:
-                continue
+                res = f.result()
+                if res: signals.append(res)
+            except: continue
 
-    # STEP 4: Sort signals by score and candidate priority
+    # Rank: Candidates first, then by descending score
     signals.sort(
-        key=lambda x: (
-            int(x.get("is_candidate", False)),
-            float(x.get("candidate_score", x.get("macd_hist", 0))),
-        ),
+        key=lambda x: (int(x.get("is_candidate", False)), float(x.get("candidate_score", 0))),
         reverse=True,
     )
 
-    # STEP 5: Final categorization and limit results
     for item in signals:
         if item["ticker"] in ipo_set:
             item["category"] = "ipo"
 
-    # Limit to top results to avoid overwhelming the system
     top_signals = signals[:100]
 
-    # STEP 6: Persistence
     if top_signals:
         save_signals_cache(top_signals)
         return top_signals
-
-    # STEP 7: Fallback to last known cache if real-time scan failed or yielded nothing
-    cached = load_signals_cache()
-    if cached and cached.get("signals"):
-        for sig in cached["signals"]:
-            sig["_from_cache"] = True
-            sig["_cache_last_updated"] = cached.get("last_updated", "")
-        return cached["signals"]
 
     return []
