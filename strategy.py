@@ -256,56 +256,30 @@ def scan_market(
     max_signals: int = 30,
     scan_timeout_sec: int = 25,
 ) -> List[Dict]:
-    """
-    Scan the market for signals.
 
-    Behaviour
-    ---------
-    1. If the market is CLOSED  → skip live scan, return persisted cache.
-    2. If the market is OPEN    → run the live scan.
-         • Success   → save to signals_cache.json, return live signals.
-         • Empty/err → load signals_cache.json, return cached signals.
-    3. If both live scan AND cache are empty → mover fallback (original).
-    4. Absolute last resort     → watchlist skeleton (original).
-
-    Each returned signal dict carries two optional meta keys that app.py
-    forwards to the frontend:
-        _from_cache          : bool  – True when served from disk cache
-        _cache_last_updated  : str   – "YYYY-MM-DD HH:MM" timestamp
-    """
     market_open = is_market_open()
 
-    # ── STEP 1: Market closed → serve disk cache immediately ─────────────────
+    # STEP 1: Market closed → use cache
     if not market_open:
-        cached = load_signals_cache()
-        if cached and cached.get("signals"):
-            signals = cached["signals"]
-            for sig in signals:
-                sig["_from_cache"] = True
-                sig["_cache_last_updated"] = cached.get("last_updated", "")
-            return signals
-        # Cache is missing too – fall through to attempt a live scan anyway
-        # (data.py will return the last daily close even outside market hours)
-
-    # ── STEP 2: Attempt live scan ─────────────────────────────────────────────
-# ✅ USE ONLY YOUR STRUCTURED UNIVERSE
-all_symbols = []
-
-for category, stocks in categorized_stocks.items():
-    for s in stocks:
-        all_symbols.append((s, category))
-
-# Add priority stocks as smallcap if not present
-for s in PRIORITY_SYMBOLS:
-    all_symbols.append((s, "smallcap"))
-
-    if not all_symbols:
         cached = load_signals_cache()
         if cached and cached.get("signals"):
             for sig in cached["signals"]:
                 sig["_from_cache"] = True
                 sig["_cache_last_updated"] = cached.get("last_updated", "")
             return cached["signals"]
+
+    # STEP 2: Build symbol list
+    all_symbols = []
+
+    for category, stocks in categorized_stocks.items():
+        for s in stocks:
+            all_symbols.append((s, category))
+
+    # Add priority stocks
+    for s in PRIORITY_SYMBOLS:
+        all_symbols.append((s, "smallcap"))
+
+    if not all_symbols:
         return []
 
     category_map = _build_category_map(categorized_stocks)
@@ -314,121 +288,55 @@ for s in PRIORITY_SYMBOLS:
         for symbol in categorized_stocks.get("ipo", [])
     )
 
-    signals: List[Dict] = []
-    movers: List[Tuple[float, Dict]] = []
+    signals = []
 
+    # STEP 3: Parallel scan
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-jobs = [exe.submit(scan_symbol, provider, s, cat) for (s, cat) in all_symbols]
+        jobs = [
+            executor.submit(scan_symbol, provider, s, cat)
+            for (s, cat) in all_symbols
         ]
-        done_jobs = jobs
-        try:
-            done_jobs, pending_jobs = wait(jobs, timeout=scan_timeout_sec)
-            for future in pending_jobs:
-                future.cancel()
-        except TimeoutError:
-            done_jobs = []
 
-        for future in done_jobs:
+        done, pending = wait(jobs, timeout=scan_timeout_sec)
+
+        for future in pending:
+            future.cancel()
+
+        for future in done:
             try:
                 result = future.result()
                 if result:
                     signals.append(result)
-            except Exception:
+            except:
                 continue
 
+    # STEP 4: Sort signals
     signals.sort(
-        key=lambda item: (
-            int(not item.get("is_candidate", False)),
-            float(item.get("candidate_score", float(item.get("macd_hist", 0.0)))),
-            float(item.get("price", 0.0)),
+        key=lambda x: (
+            int(not x.get("is_candidate", False)),
+            float(x.get("candidate_score", x.get("macd_hist", 0))),
         ),
         reverse=True,
     )
+
+    # STEP 5: Mark IPO category
     for item in signals:
-        ticker = str(item.get("ticker", "")).upper()
-        if ticker in ipo_set:
+        if item["ticker"] in ipo_set:
             item["category"] = "ipo"
 
     top = signals[:max_signals]
 
+    # STEP 6: Save cache
     if top:
-        existing = {str(item.get("ticker", "")).upper() for item in top}
-        for symbol in PRIORITY_SYMBOLS:
-            if len(top) >= max_signals:
-                break
-            if symbol in existing:
-                continue
-            watch = _build_priority_watch(
-                provider,
-                symbol,
-                "ipo" if symbol in ipo_set else category_map.get(symbol, "smallcap"),
-            )
-            if watch:
-                top.append(watch)
-                existing.add(symbol)
-        top = top[:max_signals]
-
-        # ── STEP 3: Persist fresh signals ────────────────────────────────────
         save_signals_cache(top)
         return top
 
-    # ── STEP 4: Live scan empty → load disk cache ─────────────────────────────
+    # STEP 7: fallback cache
     cached = load_signals_cache()
     if cached and cached.get("signals"):
-        cached_signals = cached["signals"]
-        for sig in cached_signals:
+        for sig in cached["signals"]:
             sig["_from_cache"] = True
             sig["_cache_last_updated"] = cached.get("last_updated", "")
-        return cached_signals
+        return cached["signals"]
 
-    # ── STEP 5: Mover fallback (original logic, unchanged) ───────────────────
-    for symbol in all_symbols:
-        try:
-            frame = provider.get_ohlc(symbol=symbol, period="2mo", interval="1d")
-            score = _mover_score(frame)
-            if score is None:
-                continue
-            df = _prepare_indicators(frame)
-            if df.empty:
-                continue
-            last_row = df.iloc[-1]
-            category = category_map.get(symbol, "smallcap")
-            if symbol in ipo_set:
-                category = "ipo"
-            item = _build_signal(
-                ticker=symbol,
-                category=category,
-                row=last_row,
-                pattern="Top Mover (fallback)",
-            )
-            item["mover_5d_pct"] = float(score)
-            movers.append((float(score), item))
-        except Exception:
-            continue
-
-    movers.sort(key=lambda x: float(x[0]), reverse=True)
-    fallback = [item for _, item in movers[:max_signals]]
-    if fallback:
-        # Persist movers as well so next off-hours request has something useful
-        save_signals_cache(fallback)
-        return fallback
-
-    # ── STEP 6: Absolute last resort – watchlist skeleton (original) ─────────
-    ordered_symbols = PRIORITY_SYMBOLS + [s for s in all_symbols if s not in PRIORITY_SYMBOLS]
-    sliced = ordered_symbols[: min(20, len(ordered_symbols))]
-    return [
-        {
-            "ticker": symbol,
-            "category": "ipo" if symbol in ipo_set else category_map.get(symbol, "smallcap"),
-            "pattern": "Watchlist (data unavailable)",
-            "price": 100.0,
-            "entry": 100.0,
-            "target": 106.0,
-            "sl": 97.0,
-            "rr": 2.0,
-            "rr_text": "1:2.0",
-            "sl_pct": -3.0,
-            "target_pct": 6.0,
-        }
-        for symbol in sliced
-    ]
+    return []
