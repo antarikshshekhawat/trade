@@ -10,9 +10,9 @@ import pandas as pd
 import yfinance as yf
 
 
-# ─────────────────────────────────────────
+# ================================
 # INDEX DATA SOURCES
-# ─────────────────────────────────────────
+# ================================
 INDEX_URLS = {
     "largecap": "https://niftyindices.com/IndexConstituent/ind_nifty50list.csv",
     "midcap": "https://niftyindices.com/IndexConstituent/ind_niftymidcap100list.csv",
@@ -20,9 +20,9 @@ INDEX_URLS = {
 }
 
 
-# ─────────────────────────────────────────
-# STRONG FALLBACK (VERY IMPORTANT)
-# ─────────────────────────────────────────
+# ================================
+# FALLBACK (SAFE + EXTENDED)
+# ================================
 FALLBACK_UNIVERSE = {
     "largecap": [
         "RELIANCE","TCS","INFY","HDFCBANK","ICICIBANK","LT","SBIN",
@@ -54,9 +54,9 @@ FALLBACK_IPO_STOCKS = [
 ]
 
 
-# ─────────────────────────────────────────
+# ================================
 # HELPERS
-# ─────────────────────────────────────────
+# ================================
 def _clean_symbol(symbol: str) -> str:
     return str(symbol).strip().upper().replace(".NS", "")
 
@@ -66,12 +66,12 @@ def _to_nse_ticker(symbol: str) -> str:
     return f"{symbol}.NS" if symbol else ""
 
 
-# ─────────────────────────────────────────
+# ================================
 # FETCH INDEX DATA
-# ─────────────────────────────────────────
+# ================================
 def _load_index_symbols(url: str) -> List[str]:
     try:
-        with urlopen(url, timeout=8) as response:
+        with urlopen(url, timeout=10) as response:
             raw_csv = response.read().decode("utf-8", errors="ignore")
 
         df = pd.read_csv(StringIO(raw_csv))
@@ -81,15 +81,17 @@ def _load_index_symbols(url: str) -> List[str]:
                 return sorted(set(
                     _clean_symbol(x) for x in df[col].dropna().tolist()
                 ))
-    except Exception:
+
+    except Exception as e:
+        print(f"[ERROR] Failed to load {url} -> {e}")
         return []
 
     return []
 
 
-# ─────────────────────────────────────────
-# BUILD STOCK UNIVERSE (CORE FUNCTION)
-# ─────────────────────────────────────────
+# ================================
+# BUILD STOCK UNIVERSE
+# ================================
 def build_stock_universe() -> Dict[str, List[str]]:
     universe = {}
 
@@ -97,19 +99,20 @@ def build_stock_universe() -> Dict[str, List[str]]:
         symbols = _load_index_symbols(url)
 
         if symbols:
-            print(f"[DATA] Loaded {len(symbols)} {category} stocks from NSE")
+            print(f"[DATA] Loaded {len(symbols)} {category}")
             universe[category] = symbols
         else:
             print(f"[DATA] Using fallback for {category}")
             universe[category] = FALLBACK_UNIVERSE[category]
 
     universe["ipo"] = FALLBACK_IPO_STOCKS
+
     return universe
 
 
-# ─────────────────────────────────────────
+# ================================
 # DATA STRUCTURE
-# ─────────────────────────────────────────
+# ================================
 @dataclass
 class StockRecord:
     symbol: str
@@ -118,17 +121,19 @@ class StockRecord:
 
 def flatten_universe(universe: Dict[str, List[str]]) -> List[StockRecord]:
     records = []
+
     for category, symbols in universe.items():
         for s in symbols:
             cleaned = _clean_symbol(s)
             if cleaned:
                 records.append(StockRecord(cleaned, category))
+
     return records
 
 
-# ─────────────────────────────────────────
+# ================================
 # DATA PROVIDERS
-# ─────────────────────────────────────────
+# ================================
 class MarketDataProvider(ABC):
     @abstractmethod
     def get_ohlc(self, symbol: str, period: str = "8mo", interval: str = "1d") -> pd.DataFrame:
@@ -150,7 +155,8 @@ class YFinanceDataProvider(MarketDataProvider):
                 progress=False,
                 threads=False
             )
-        except Exception:
+        except Exception as e:
+            print(f"[ERROR] yf failed for {symbol}: {e}")
             return pd.DataFrame()
 
         if df.empty:
@@ -158,7 +164,7 @@ class YFinanceDataProvider(MarketDataProvider):
 
         df = df.rename(columns=str.lower)
 
-        required = {"open","high","low","close","volume"}
+        required = {"open", "high", "low", "close", "volume"}
         if not required.issubset(df.columns):
             return pd.DataFrame()
 
@@ -167,11 +173,11 @@ class YFinanceDataProvider(MarketDataProvider):
 
 class BrokerRealtimeProvider(MarketDataProvider):
     def get_ohlc(self, symbol: str, period="8mo", interval="1d") -> pd.DataFrame:
-        raise NotImplementedError("Use broker API here later")
+        raise NotImplementedError("Use broker API later")
 
 
-# ─────────────────────────────────────────
+# ================================
 # DEFAULT PROVIDER
-# ─────────────────────────────────────────
+# ================================
 def get_default_provider() -> MarketDataProvider:
     return YFinanceDataProvider()
