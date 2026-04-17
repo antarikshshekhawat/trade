@@ -1165,7 +1165,39 @@ function render() {
         <span class="price-chg ${chgClass}">${chgSign}${fmt(changePct)}%</span>
       </div>
 
-      <div class="kv-grid">
+<div class="kv-grid">
+  <div class="kv">
+    <div class="kv-lbl">Entry</div>
+    <div class="kv-val blue">₹${fmt(entry)}</div>
+  </div>
+
+  <div class="kv">
+    <div class="kv-lbl">Target</div>
+    <div class="kv-val go">₹${fmt(target)}</div>
+    <div class="kv-sub">+${fmt(tPct)}%</div>
+  </div>
+
+  <div class="kv">
+    <div class="kv-lbl">Stop Loss</div>
+    <div class="kv-val stop">₹${fmt(sl)}</div>
+    <div class="kv-sub">${fmt(slPct)}%</div>
+  </div>
+
+  <!-- ✅ NEW COLUMN -->
+  <div class="kv">
+    <div class="kv-lbl">Last Close</div>
+    <div class="kv-val">₹${fmt(s.last_close)}</div>
+  </div>
+
+  <div class="kv">
+    <div class="kv-lbl">Risk : Reward</div>
+    <div class="kv-val warn">${esc(rrText)}</div>
+    <div class="rr-track">
+      <div class="rr-risk"></div>
+      <div class="rr-reward" style="flex:${Math.min(rr,6)};"></div>
+    </div>
+  </div>
+</div>
         <div class="kv">
           <div class="kv-lbl">Entry</div>
           <div class="kv-val blue">₹${fmt(entry)}</div>
