@@ -173,19 +173,18 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
         elif ema_trend_ok and last_macdh > 0 and 40 <= last_rsi <= 70:
             signal = _build_signal(symbol, category, last_row, "Trend Continuation")
 
+        # 🟡 4. FALLBACK (VERY IMPORTANT)
         else:
-    # 🟡 fallback relaxed signal (so UI never empty)
-    signal = _build_signal(symbol, category, last_row, "Weak Trend")
+            signal = _build_signal(symbol, category, last_row, "Weak Trend")
+            signal["candidate_score"] = float(_score_candidate(last_row)) - 10
+            signal["is_candidate"] = False
+            return signal
 
-    signal["candidate_score"] = float(_score_candidate(last_row)) - 10
-    signal["is_candidate"] = False
-
-    return signal
-        # ✅ ADD SCORE
+        # ✅ NORMAL SIGNAL FLOW
         signal["candidate_score"] = float(_score_candidate(last_row))
         signal["is_candidate"] = True
 
-        # ✅ FILTER BAD RR
+        # ✅ RELAXED RR FILTER
         if signal["rr"] < 1.1:
             return None
 
