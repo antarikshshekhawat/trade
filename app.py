@@ -96,7 +96,7 @@ _cache: Dict[str, object] = {
 
 
 
-CACHE_SECONDS = 12
+CACHE_SECONDS = 5
 
 UNIVERSE_CACHE_SECONDS = 600
 
@@ -332,6 +332,12 @@ def _normalize_signal(item: Dict) -> Dict:
     # ✅ ADD THIS LINE
 
     last_close = float(item.get("last_close") or item.get("prev_close") or entry)
+    duration = str(item.get("duration") or "Mid-term")
+    long_term_candidate = bool(item.get("long_term_candidate"))
+    long_term_return_band = str(item.get("long_term_return_band") or "Not in long-term basket")
+    long_term_strategy = str(item.get("long_term_strategy") or "")
+    low_high = bool(item.get("risk_bucket_low_high"))
+    high_high = bool(item.get("risk_bucket_high_high"))
 
 
 
@@ -364,6 +370,12 @@ def _normalize_signal(item: Dict) -> Dict:
         # ✅ ADD THIS FIELD
 
         "last_close": round(last_close, 2),
+        "duration": duration,
+        "long_term_candidate": long_term_candidate,
+        "long_term_return_band": long_term_return_band,
+        "long_term_strategy": long_term_strategy,
+        "risk_bucket_low_high": low_high,
+        "risk_bucket_high_high": high_high,
 
     }
 
