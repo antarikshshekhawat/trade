@@ -128,7 +128,6 @@ def _mover_score(df: pd.DataFrame) -> Optional[float]:
 # ── SCANNING LOGIC ───────────────────────────────────────────────────────────
 
 def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Optional[Dict]:
-    """Analyzes symbol and returns signal or safe fallback for non-signals."""
     try:
         frame = provider.get_ohlc(symbol=symbol, period="4mo", interval="1d")
         if frame is None or frame.empty or len(frame) < 35:
@@ -145,67 +144,48 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
         prev_macdh = float(prev_row["macdh"])
         last_macdh = float(last_row["macdh"])
         min_recent_macdh = float(recent["macdh"].astype(float).min())
-        
+
         macd_cross_up = (prev_macdh < 0 and last_macdh > 0) or (
             min_recent_macdh < 0 and last_macdh > 0
         )
-        
+
         last_rsi = float(last_row["rsi14"])
         ema20 = float(last_row["ema20"])
         ema50 = float(last_row["ema50"])
-        rsi_ok = 35 <= last_rsi <= 80
-        ema_trend_ok = ema20 > ema50
 
         last_close = float(last_row["close"])
         high20_prev = float(last_row["high20_prev"])
         last_volume = float(last_row["volume"])
         vol_sma20 = float(last_row["vol_sma20"])
-        
-        # 1. Momentum Breakout
-        if last_close >= high20_prev and vol_sma20 > 0 and last_volume >= 2.0 * vol_sma20:
-            breakout = _build_signal(symbol, category, last_row, "Momentum Breakout")
-            breakout["candidate_score"] = float(_score_candidate(last_row)) + 20.0
-            breakout["is_candidate"] = True
-            breakout["mover_5d_pct"] = float(_mover_score(frame) or 0.0)
-            return breakout
 
-        # 2. MACD Reversal
-        if macd_cross_up and rsi_ok and ema_trend_ok:
-            return _build_signal(symbol, category, last_row, "MACD Cross + RSI Zone + EMA Trend")
+        ema_trend_ok = ema20 > ema50
+        rsi_ok = 40 <= last_rsi <= 75
 
-        # 3. Trend Continuation Candidate
-        if ema_trend_ok and last_macdh > 0 and 38 <= last_rsi <= 72:
-            candidate = _build_signal(symbol, category, last_row, "Momentum Trend Candidate")
-            candidate["candidate_score"] = float(_score_candidate(last_row))
-            candidate["is_candidate"] = True
-            mover = _mover_score(frame)
-            if mover is not None:
-                candidate["mover_5d_pct"] = float(mover)
-            return candidate
+        # 🚀 1. STRONG BREAKOUT
+        if last_close >= high20_prev and vol_sma20 > 0 and last_volume >= 1.5 * vol_sma20:
+            signal = _build_signal(symbol, category, last_row, "Momentum Breakout")
 
-        # --- SAFE FALLBACK FOR ALL OTHER STOCKS ---
-        try:
-            current_close = float(last_row["close"])
-            current_score = float(_score_candidate(last_row))
-        except:
+        # 🚀 2. REVERSAL
+        elif macd_cross_up and ema_trend_ok and rsi_ok:
+            signal = _build_signal(symbol, category, last_row, "MACD + RSI + EMA")
+
+        # 🚀 3. TREND CONTINUATION
+        elif ema_trend_ok and last_macdh > 0 and 40 <= last_rsi <= 70:
+            signal = _build_signal(symbol, category, last_row, "Trend Continuation")
+
+        else:
+            return None   # ❌ REMOVE FALLBACK COMPLETELY
+
+        # ✅ ADD SCORE
+        signal["candidate_score"] = float(_score_candidate(last_row))
+        signal["is_candidate"] = True
+
+        # ✅ FILTER BAD RR
+        if signal["rr"] < 1.3:
             return None
 
-        return {
-            "ticker": symbol,
-            "category": category,
-            "pattern": "No Strong Signal",
-            "price": round(current_close, 2),
-            "entry": round(current_close, 2),
-            "target": round(current_close * 1.02, 2),
-            "sl": round(current_close * 0.98, 2),
-            "rr": 1.0,
-            "rr_text": "1:1",
-            "sl_pct": -2.0,
-            "target_pct": 2.0,
-            "candidate_score": current_score,
-            "is_candidate": False
-        }
-            
+        return signal
+
     except Exception:
         return None
 
