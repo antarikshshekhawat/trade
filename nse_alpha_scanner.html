@@ -386,11 +386,18 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 }
 .c-pattern-top::before { content: "✦"; font-size: 8px; }
 
-/* Row 2: Badges */
+/* Row 2: Badges — category + status grouped with watchlist (+) on the right */
 .c-row-2 {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
+}
+.c-row-2 .c-badges-cluster {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 .c-ticker-sub {
   font-size: 14px;
@@ -446,13 +453,26 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
   margin-top: -6px;
 }
 
-/* Row 4: Price + day change + chart */
+/* Row 4: Price + day change + chart (chart pinned right) */
 .c-row-4 {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   margin-top: 6px;
+  width: 100%;
+}
+.c-row-4-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   flex-wrap: wrap;
+}
+.c-chart-slot {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding-left: 28px;
+  padding-right: 2px;
 }
 .c-price {
   font-family: var(--font-mono);
@@ -486,10 +506,11 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
   justify-content: space-between;
   font-family: var(--font-mono);
   font-size: 9px;
-  color: var(--text-muted);
   margin-bottom: 6px;
 }
 .prog-labels span:last-child { text-align: right; }
+.prog-lbl-sl { color: #f87171; font-weight: 700; }
+.prog-lbl-tg { color: #4ade80; font-weight: 700; }
 
 .prog-bar-container {
   height: 4px;
@@ -504,7 +525,7 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
   border-radius: 2px;
 }
 .prog-fill.sl { background: var(--loss); left: 0; width: 30%; } /* Visual representation */
-.prog-fill.target { background: var(--all); right: 0; width: 70%; }
+.prog-fill.target { background: #22c55e; right: 0; width: 70%; }
 .prog-marker {
   position: absolute;
   top: -2px;
@@ -735,16 +756,22 @@ body::before {
   margin-top: 6px;
   padding: 10px 12px;
   border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background: rgba(0, 0, 0, 0.28);
-  color: var(--text);
+  border: 1px solid rgba(59, 130, 246, 0.55);
+  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 55%, #1e40af 100%);
+  color: #f8fafc;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+}
+.sidebar-select option {
+  background: #1e3a8a;
+  color: #f1f5f9;
 }
 .sidebar-select:focus {
   outline: none;
-  border-color: rgba(34, 211, 238, 0.45);
+  border-color: rgba(147, 197, 253, 0.9);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
 }
 .filter-counts {
   margin-top: 8px;
@@ -1533,25 +1560,27 @@ function buildCard(sig, inWatch) {
 
   const subLine = sig._myTrade
     ? `Fixed entry ₹${(sig.entry || 0).toFixed(2)} · live LTP (updates) · SL ₹${sl.toFixed(2)} · T ₹${target.toFixed(2)}`
-    : `• ${pattern}`;
+    : '';
 
   div.innerHTML = `
     <div class="c-row-1">
       <div class="c-ticker-top">${sig.ticker}</div>
       <div class="c-pattern-top">${pattern}</div>
     </div>
-    <div class="c-row-2" style="justify-content:space-between;align-items:center;gap:10px;">
-      <div class="c-badges" style="flex-wrap:wrap;">
+    <div class="c-row-2">
+      <div class="c-badges c-badges-cluster">
         <span class="badge ${badgeClass} cat-wide">${labelText}</span>
         ${statusBadge}
+        ${wlBtn}
       </div>
-      <div class="c-badges">${wlBtn}</div>
     </div>
-    <div class="c-row-3">${subLine}</div>
+    ${sig._myTrade ? `<div class="c-row-3">${subLine}</div>` : ''}
     <div class="c-row-4">
-      <div class="c-price ${priceDirClass}">₹${priceStr}</div>
-      <div class="c-change ${chClass}">${displayChangeStr}</div>
-      ${chartBtn}
+      <div class="c-row-4-main">
+        <div class="c-price ${priceDirClass}">₹${priceStr}</div>
+        <div class="c-change ${chClass}">${displayChangeStr}</div>
+      </div>
+      <div class="c-chart-slot">${chartBtn}</div>
     </div>
     <div class="c-metrics-grid">
       <div class="metric-box entry"><div class="k">ENTRY</div><div class="v">₹${entry.toFixed(2)}</div></div>
@@ -1567,8 +1596,8 @@ function buildCard(sig, inWatch) {
     <div class="c-row-3" style="margin-top:2px;">Duration: ${duration}</div>
     <div class="c-row-5">
       <div class="prog-labels">
-        <span>SL ${sl.toFixed(2)}</span>
-        <span>Target ${target.toFixed(2)}</span>
+        <span class="prog-lbl-sl">SL ${sl.toFixed(2)}</span>
+        <span class="prog-lbl-tg">Target ${target.toFixed(2)}</span>
       </div>
       <div class="prog-bar-container">
         <div class="prog-fill sl" style="width: ${slW}%"></div>
