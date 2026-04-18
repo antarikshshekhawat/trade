@@ -38,9 +38,15 @@ FALLBACK_UNIVERSE = {
 }
 
 FALLBACK_IPO_STOCKS = [
-    "TATATECH","AWL","MEDANTA","MANKIND",
-    "IREDA","DOMS","ZOMATO","NYKAA","PAYTM","LATENTVIEW"
+    # Focus list for recent/current IPO-era names (2024-2026 watchlist universe)
+    "HYUNDAI","BAJAJHFL","OLALEC","PREMIERENE","UNIECOM","TBO",
+    "AWFIS","KRN","VRAJ","GODIGIT","SWIGGY","MOBIKWIK",
+    "NSDL","WAAREEENER","JUNIPER","AZAD","KAYNES","TATATECH",
+    "MANKIND","DOMS","IREDA","MEDANTA","LATENTVIEW","NYKAA"
 ]
+
+ALL_NSE_URL = "https://archives.nseindia.com/content/equities/EQUITY_L.csv"
+_ALL_NSE_CACHE: Dict[str, object] = {"symbols": [], "expires_at": 0.0}
 
 # ─────────────────────────────────────────────────────────────
 # HELPERS
@@ -77,6 +83,41 @@ def _load_index_symbols(url: str) -> List[str]:
         print(f"[DATA ERROR] Failed to load index from {url}: {e}")
 
     return []
+
+
+def load_all_nse_symbols() -> List[str]:
+    """Load tradable NSE symbols for global ticker search (cached for 6h)."""
+    now = time.time()
+    if _ALL_NSE_CACHE["symbols"] and now < float(_ALL_NSE_CACHE["expires_at"]):
+        return _ALL_NSE_CACHE["symbols"]  # type: ignore[return-value]
+
+    symbols: List[str] = []
+    try:
+        req = urllib.request.Request(
+            ALL_NSE_URL,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
+        )
+        with urllib.request.urlopen(req, timeout=15) as response:
+            raw_csv = response.read().decode("utf-8", errors="ignore")
+        df = pd.read_csv(StringIO(raw_csv))
+        for col in ["SYMBOL", "Symbol", "symbol"]:
+            if col in df.columns:
+                symbols = sorted(list(set(_clean_symbol(x) for x in df[col].dropna() if _clean_symbol(x))))
+                break
+    except Exception as e:
+        print(f"[DATA ERROR] Failed to load full NSE list: {e}")
+
+    if not symbols:
+        # Fallback: at least all scanner universe symbols remain searchable.
+        uni = build_stock_universe()
+        tmp: List[str] = []
+        for vals in uni.values():
+            tmp.extend(vals)
+        symbols = sorted(list(set(_clean_symbol(x) for x in tmp if _clean_symbol(x))))
+
+    _ALL_NSE_CACHE["symbols"] = symbols
+    _ALL_NSE_CACHE["expires_at"] = now + (6 * 3600)
+    return symbols
 
 # ─────────────────────────────────────────────────────────────
 # BUILD STOCK UNIVERSE
