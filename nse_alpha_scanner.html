@@ -752,7 +752,7 @@ body::before {
 }
 .risk-columns {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 6px;
   margin-top: 7px;
 }
@@ -770,6 +770,55 @@ body::before {
 }
 .risk-chip.low.active { background: linear-gradient(135deg, #4ade80, #22d3ee); }
 .risk-chip.high.active { background: linear-gradient(135deg, #fb7185, #f97316); color: #fff; }
+.risk-chip.long.active { background: linear-gradient(135deg, #60a5fa, #a78bfa); color: #fff; }
+.swing-chip {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+.swing-chip.good { color: #22c55e; border-color: rgba(34, 197, 94, 0.4); background: rgba(34, 197, 94, 0.1); }
+.swing-chip.ok { color: #f59e0b; border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.1); }
+.swing-chip.bad { color: #ef4444; border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.1); }
+.chart-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(3, 6, 15, 0.8);
+  backdrop-filter: blur(8px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.chart-modal.open { display: flex; }
+.chart-panel {
+  width: min(1080px, 96vw);
+  height: min(760px, 90vh);
+  background: rgba(8, 12, 28, 0.96);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.chart-head {
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+.chart-title { font-size: 14px; font-weight: 700; letter-spacing: 0.04em; }
+.chart-close {
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.chart-frame-wrap { flex: 1; }
+.chart-frame { width: 100%; height: 100%; border: 0; }
 </style>
 </head>
 <body>
@@ -890,6 +939,10 @@ body::before {
           <span class="stat-label" style="color: var(--ipo)">IPO</span>
           <span class="stat-val" style="color: var(--ipo)" id="top-val-ipo">—</span>
         </div>
+        <div class="stat-block">
+          <span class="stat-label">Swing Market</span>
+          <span class="swing-chip ok" id="swing-chip">WAIT</span>
+        </div>
       </div>
 
       <div class="topbar-right">
@@ -941,6 +994,17 @@ body::before {
 </div>
 
 <div id="toast"></div>
+<div class="chart-modal" id="chart-modal">
+  <div class="chart-panel">
+    <div class="chart-head">
+      <div class="chart-title" id="chart-title">Live chart</div>
+      <button type="button" class="chart-close" id="chart-close">Close</button>
+    </div>
+    <div class="chart-frame-wrap">
+      <iframe class="chart-frame" id="chart-frame" src="about:blank" loading="lazy"></iframe>
+    </div>
+  </div>
+</div>
 
 <script>
 /* STATE */
@@ -954,8 +1018,8 @@ let searchDebounce;
 
 const LS_WATCHLIST = 'nse_watchlist_v2';
 const LS_MY_TRADES = 'nse_my_trades_v1';
-const REFRESH_MS = 20000;
-let secLeft = 20;
+const REFRESH_MS = 5000;
+let secLeft = 5;
 
 const getWatchlist = () => new Set(JSON.parse(localStorage.getItem(LS_WATCHLIST) || '[]'));
 const saveWatchlist = (set) => localStorage.setItem(LS_WATCHLIST, JSON.stringify([...set]));
@@ -983,6 +1047,21 @@ updateClock();
 function updateCountdownEl() {
   const el = document.getElementById('auto-countdown');
   if (el) el.textContent = `Next refresh: ${secLeft}s`;
+}
+
+function updateSwingChip(label, cls) {
+  const chip = document.getElementById('swing-chip');
+  chip.textContent = label;
+  chip.className = `swing-chip ${cls}`;
+}
+
+function computeSwingStatus() {
+  const total = allSignals.length || 1;
+  const candidates = allSignals.filter((s) => Boolean(s.is_candidate)).length;
+  const ratio = candidates / total;
+  if (ratio >= 0.42) return { label: 'GOOD', cls: 'good' };
+  if (ratio >= 0.27) return { label: 'NEUTRAL', cls: 'ok' };
+  return { label: 'AVOID', cls: 'bad' };
 }
 
 /* TOAST */
@@ -1079,6 +1158,23 @@ async function refreshQuotesForTrades() {
   }
 }
 
+function openChartModal(ticker) {
+  const modal = document.getElementById('chart-modal');
+  const frame = document.getElementById('chart-frame');
+  const title = document.getElementById('chart-title');
+  const clean = String(ticker || '').toUpperCase().replace('.NS', '');
+  title.textContent = `${clean} · Live chart`;
+  frame.src = `https://s.tradingview.com/widgetembed/?symbol=NSE%3A${encodeURIComponent(clean)}&interval=15&hidesidetoolbar=1&symboledit=0&saveimage=0&theme=dark&style=1&timezone=Asia%2FKolkata&withdateranges=1`;
+  modal.classList.add('open');
+}
+
+function closeChartModal() {
+  const modal = document.getElementById('chart-modal');
+  const frame = document.getElementById('chart-frame');
+  modal.classList.remove('open');
+  frame.src = 'about:blank';
+}
+
 function getLtp(ticker) {
   const s = allSignals.find((x) => x.ticker === ticker);
   if (s) return s.price != null ? s.price : s.entry;
@@ -1114,7 +1210,7 @@ function tradeToCardSig(t, ltp) {
 async function triggerRefresh() {
   const btn = document.getElementById('btn-refresh');
   btn.classList.add('spinning');
-  secLeft = 20;
+  secLeft = 5;
   updateCountdownEl();
   try {
     await fetch('/api/refresh', { method: 'POST' });
@@ -1152,6 +1248,8 @@ async function loadAndRender() {
   updateCounts(['nav-count-mid', 'top-val-mid'], c.midcap ?? 0);
   updateCounts(['nav-count-small', 'top-val-small'], c.smallcap ?? 0);
   updateCounts(['nav-count-ipo', 'top-val-ipo'], c.ipo ?? 0);
+  const swing = computeSwingStatus();
+  updateSwingChip(swing.label, swing.cls);
 
   const cs = data.cache_status || {};
   const fromCache = cs.from_cache ?? data.from_cache;
@@ -1279,6 +1377,11 @@ function buildCard(sig, inWatch) {
   const lastClose = sig.last_close != null ? sig.last_close : entry;
   const rrNum = Number(sig.rr || 0);
   const rrText = sig.rr_text || `1:${rrNum.toFixed(2)}`;
+  const slPct = Number(sig.sl_pct != null ? sig.sl_pct : (entry > 0 ? ((sl / entry) - 1) * 100 : 0));
+  const targetPct = Number(sig.target_pct != null ? sig.target_pct : (entry > 0 ? ((target / entry) - 1) * 100 : 0));
+  const duration = sig.duration || 'Mid-term';
+  const longTermBand = sig.long_term_return_band || 'Not in long-term basket';
+  const longTermCandidate = Boolean(sig.long_term_candidate);
   const riskPct = entry > 0 ? ((entry - sl) / entry) * 100 : 0;
   const lowRiskHighReward = Boolean(sig.risk_bucket_low_high) || (riskPct <= 3.0 && rrNum >= 2.0);
   const highRiskHighReward = Boolean(sig.risk_bucket_high_high) || (riskPct > 3.0 && rrNum >= 2.0);
@@ -1328,15 +1431,17 @@ function buildCard(sig, inWatch) {
     </div>
     <div class="c-metrics-grid">
       <div class="metric-box"><div class="k">ENTRY</div><div class="v">₹${entry.toFixed(2)}</div></div>
-      <div class="metric-box"><div class="k">STOP LOSS</div><div class="v">₹${sl.toFixed(2)}</div></div>
-      <div class="metric-box"><div class="k">TARGET</div><div class="v">₹${target.toFixed(2)}</div></div>
+      <div class="metric-box"><div class="k">STOP LOSS</div><div class="v">₹${sl.toFixed(2)} (${slPct.toFixed(2)}%)</div></div>
+      <div class="metric-box"><div class="k">TARGET</div><div class="v">₹${target.toFixed(2)} (+${targetPct.toFixed(2)}%)</div></div>
       <div class="metric-box"><div class="k">LAST CLOSE</div><div class="v">₹${Number(lastClose).toFixed(2)}</div></div>
       <div class="metric-box"><div class="k">RISK:REWARD</div><div class="v">${rrText}</div></div>
     </div>
     <div class="risk-columns">
       <div class="risk-chip low ${lowRiskHighReward ? 'active' : ''}">Low Risk · High Reward</div>
       <div class="risk-chip high ${highRiskHighReward ? 'active' : ''}">High Risk · High Reward</div>
+      <div class="risk-chip long ${longTermCandidate ? 'active' : ''}">Long-term · ${longTermCandidate ? '2x-3x / 2Y' : 'No'}</div>
     </div>
+    <div class="c-row-3" style="margin-top:2px;">Duration: ${duration} · Long-term view: ${longTermBand}</div>
     <div class="c-row-5">
       <div class="prog-labels">
         <span>SL ${sl.toFixed(2)}</span>
@@ -1351,6 +1456,9 @@ function buildCard(sig, inWatch) {
   `;
 
   const addBtn = div.querySelector('.btn-add');
+  div.addEventListener('click', () => {
+    openChartModal(sig.ticker);
+  });
   if (addBtn) {
     addBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1373,7 +1481,7 @@ function buildCard(sig, inWatch) {
 async function fullRefresh() {
   await loadAndRender();
   await fetchSectors();
-  secLeft = 20;
+  secLeft = 5;
   updateCountdownEl();
 }
 
@@ -1414,6 +1522,13 @@ document.getElementById('search-input').addEventListener('input', (e) => {
 });
 
 document.getElementById('btn-refresh').addEventListener('click', () => triggerRefresh());
+document.getElementById('chart-close').addEventListener('click', closeChartModal);
+document.getElementById('chart-modal').addEventListener('click', (e) => {
+  if (e.target && e.target.id === 'chart-modal') closeChartModal();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeChartModal();
+});
 
 document.getElementById('btn-add-trade').addEventListener('click', () => {
   const ticker = document.getElementById('mt-ticker').value.trim().toUpperCase();
