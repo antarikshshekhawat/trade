@@ -162,7 +162,7 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
         rsi_ok = 40 <= last_rsi <= 75
 
         # 🚀 1. STRONG BREAKOUT
-        if last_close >= high20_prev and vol_sma20 > 0 and last_volume >= 1.5 * vol_sma20:
+        if last_close >= high20_prev and vol_sma20 > 0 and last_volume >= 1.2 * vol_sma20:
             signal = _build_signal(symbol, category, last_row, "Momentum Breakout")
 
         # 🚀 2. REVERSAL
@@ -174,14 +174,19 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
             signal = _build_signal(symbol, category, last_row, "Trend Continuation")
 
         else:
-            return None   # ❌ REMOVE FALLBACK COMPLETELY
+    # 🟡 fallback relaxed signal (so UI never empty)
+    signal = _build_signal(symbol, category, last_row, "Weak Trend")
 
+    signal["candidate_score"] = float(_score_candidate(last_row)) - 10
+    signal["is_candidate"] = False
+
+    return signal
         # ✅ ADD SCORE
         signal["candidate_score"] = float(_score_candidate(last_row))
         signal["is_candidate"] = True
 
         # ✅ FILTER BAD RR
-        if signal["rr"] < 1.3:
+        if signal["rr"] < 1.1:
             return None
 
         return signal
@@ -247,7 +252,7 @@ def scan_market(
         if item["ticker"] in ipo_set:
             item["category"] = "ipo"
 
-    top_signals = signals[:100]
+    top_signals = signals[:60]
 
     if top_signals:
         save_signals_cache(top_signals)
