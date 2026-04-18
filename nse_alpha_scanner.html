@@ -373,11 +373,9 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .c-ticker-top {
   font-size: 18px;
   font-weight: 800;
-  letter-spacing: 0.5px;
-  background: linear-gradient(90deg, #f8fafc, #67e8f9 65%, #c084fc);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  letter-spacing: 0.04em;
+  color: #e0f2fe;
+  text-shadow: 0 0 18px rgba(56, 189, 248, 0.35);
 }
 .c-pattern-top {
   font-size: 10px;
@@ -418,6 +416,15 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .badge.ipo   { background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.3); color: var(--ipo); }
 
 .badge.status { background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.4); color: var(--active); }
+.badge.cat-wide {
+  font-size: 8px;
+  letter-spacing: 0.2px;
+  padding: 4px 8px;
+  line-height: 1.2;
+  max-width: 168px;
+  white-space: normal;
+  text-align: left;
+}
 
 .btn-add {
   width: 24px; height: 24px;
@@ -439,22 +446,26 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
   margin-top: -6px;
 }
 
-/* Row 4: Price */
+/* Row 4: Price + day change + chart */
 .c-row-4 {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 12px;
-  margin-top: 4px;
+  margin-top: 6px;
+  flex-wrap: wrap;
 }
 .c-price {
   font-family: var(--font-mono);
   font-size: 28px;
   font-weight: 800;
-  background: linear-gradient(90deg, #ffffff, #fde68a 55%, #fb7185);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #f8fafc;
 }
+.c-price.up { color: #4ade80; }
+.c-price.down { color: #f87171; }
+.c-price.flat { color: #f8fafc; }
+.c-change.up { color: #4ade80 !important; }
+.c-change.down { color: #f87171 !important; }
+.c-change.flat { color: #f8fafc !important; }
 .c-change {
   font-family: var(--font-mono);
   font-size: 12px;
@@ -693,9 +704,54 @@ body::before {
   width: var(--rail-w);
   min-width: var(--rail-w);
   border-left: 1px solid rgba(148, 163, 184, 0.12);
-  display: flex;
+  display: none;
   flex-direction: column;
   z-index: 10;
+}
+#sector-rail.rail-open {
+  display: flex;
+}
+.btn-hot-rail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #e0f2fe;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(168, 85, 247, 0.12));
+}
+.btn-hot-rail:hover { border-color: rgba(56, 189, 248, 0.6); }
+.btn-hot-rail.on {
+  border-color: rgba(192, 132, 252, 0.55);
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.2);
+}
+.sidebar-select {
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sidebar-select:focus {
+  outline: none;
+  border-color: rgba(34, 211, 238, 0.45);
+}
+.filter-counts {
+  margin-top: 8px;
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.45;
+  padding: 0 4px;
 }
 .sector-rail-head {
   padding: 16px 16px 8px;
@@ -724,56 +780,6 @@ body::before {
 .hot-sector-card .pct { font-family: var(--font-mono); font-size: 22px; font-weight: 800; margin-top: 8px; }
 .hot-sector-card .pct.up { color: #4ade80; }
 .hot-sector-card .pct.down { color: #f87171; }
-#longterm-host {
-  padding: 0 12px 20px;
-  border-top: 1px solid rgba(148, 163, 184, 0.08);
-}
-.longterm-head {
-  padding: 12px 4px 10px;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: #c4b5fd;
-}
-.lt-cat {
-  margin-bottom: 12px;
-  padding: 10px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(148, 163, 184, 0.08);
-}
-.lt-cat-title {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 1px;
-  margin-bottom: 8px;
-  text-transform: uppercase;
-}
-.lt-item {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 7px 0;
-  border-top: 1px solid rgba(148, 163, 184, 0.08);
-}
-.lt-item:first-of-type { border-top: 0; padding-top: 0; }
-.lt-name {
-  font-size: 12px;
-  font-weight: 700;
-  color: #f8fafc;
-}
-.lt-meta {
-  font-size: 10px;
-  color: var(--text-muted);
-  margin-top: 2px;
-}
-.lt-tag {
-  font-size: 9px;
-  font-weight: 800;
-  color: #d8b4fe;
-  white-space: nowrap;
-}
 #sector-list {
   flex: 1;
   overflow-y: auto;
@@ -822,7 +828,11 @@ body::before {
   font-size: 11px;
   font-weight: 700;
 }
-.metric-box.lastclose .v { color: #67e8f9; }
+.metric-box.entry .v { color: #fde047; }
+.metric-box.slstop .v { color: #f87171; }
+.metric-box.tgt .v { color: #4ade80; }
+.metric-box.lastclose .v { color: #38bdf8; }
+.metric-box.rr .v { color: #d8b4fe; }
 .chart-launch {
   padding: 5px 8px;
   border-radius: 7px;
@@ -920,47 +930,24 @@ body::before {
     <div class="sidebar-scroll">
       <div>
         <div class="nav-section-title">Category</div>
-        <div class="nav-item active" data-cat="all">
-          <div class="nav-dot" style="background: var(--all)"></div>
-          All Signals
-          <div class="nav-count" id="nav-count-all">—</div>
-        </div>
-        <div class="nav-item" data-cat="largecap">
-          <div class="nav-dot" style="background: var(--large)"></div>
-          Large Cap
-          <div class="nav-count" id="nav-count-large">—</div>
-        </div>
-        <div class="nav-item" data-cat="midcap">
-          <div class="nav-dot" style="background: var(--mid)"></div>
-          Mid Cap
-          <div class="nav-count" id="nav-count-mid">—</div>
-        </div>
-        <div class="nav-item" data-cat="smallcap">
-          <div class="nav-dot" style="background: var(--small)"></div>
-          Small Cap
-          <div class="nav-count" id="nav-count-small">—</div>
-        </div>
-        <div class="nav-item" data-cat="ipo">
-          <div class="nav-dot" style="background: var(--ipo)"></div>
-          IPO
-          <div class="nav-count" id="nav-count-ipo">—</div>
-        </div>
+        <select id="filter-cat" class="sidebar-select" aria-label="Filter by category">
+          <option value="all">All signals</option>
+          <option value="largecap">Large cap</option>
+          <option value="midcap">Mid cap</option>
+          <option value="smallcap">Small cap</option>
+          <option value="ipo">IPO</option>
+        </select>
+        <div class="filter-counts" id="filter-counts"></div>
       </div>
 
       <div>
-        <div class="nav-section-title">Sort By</div>
-        <div class="nav-item active" data-sort="score">
-          <div class="nav-icon">◈</div> Best Score
-        </div>
-        <div class="nav-item" data-sort="rr">
-          <div class="nav-icon">⇕</div> Risk : Reward
-        </div>
-        <div class="nav-item" data-sort="target">
-          <div class="nav-icon">⇡</div> Highest Target
-        </div>
-        <div class="nav-item" data-sort="ticker">
-          <div class="nav-icon">Aa</div> Ticker A–Z
-        </div>
+        <div class="nav-section-title">Sort by</div>
+        <select id="filter-sort" class="sidebar-select" aria-label="Sort signals">
+          <option value="score">Best score</option>
+          <option value="rr">Risk : reward</option>
+          <option value="target">Highest target</option>
+          <option value="ticker">Ticker A–Z</option>
+        </select>
       </div>
 
       <div>
@@ -1029,6 +1016,7 @@ body::before {
       </div>
 
       <div class="topbar-right">
+        <button type="button" class="btn-hot-rail" id="btn-hot-rail" title="Toggle sector heat panel">Hot sectors</button>
         <div class="clock" id="clock">00:00:00 pm</div>
         <button class="btn-refresh" id="btn-refresh">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1073,7 +1061,6 @@ body::before {
     <div id="sector-list">
       <div class="sector-empty">Loading sector indices…</div>
     </div>
-    <div id="longterm-host"></div>
   </aside>
 </div>
 
@@ -1243,37 +1230,6 @@ function renderMarketConditionPanel() {
   `;
 }
 
-function renderLongTermRail() {
-  const host = document.getElementById('longterm-host');
-  const cats = ['largecap', 'midcap', 'smallcap', 'ipo'];
-  const grouped = {};
-  cats.forEach((cat) => {
-    grouped[cat] = allSignals
-      .filter((s) => String(s.category || '').toLowerCase() === cat && Boolean(s.long_term_candidate))
-      .sort((a, b) => Number(b.candidate_score || 0) - Number(a.candidate_score || 0))
-      .slice(0, 3);
-  });
-  const sectionHtml = cats.map((cat) => {
-    const title = cat === 'largecap' ? 'Large Cap' : cat === 'midcap' ? 'Mid Cap' : cat === 'smallcap' ? 'Small Cap' : 'IPO';
-    const rows = (grouped[cat] || []).map((s) => `
-      <div class="lt-item">
-        <div>
-          <div class="lt-name">${s.ticker}</div>
-          <div class="lt-meta">${s.long_term_strategy || 'Accumulate gradually on dips.'}</div>
-        </div>
-        <div class="lt-tag">${s.long_term_return_band || '2x-3x / 2Y'}</div>
-      </div>
-    `).join('') || `<div class="lt-meta">No current long-term setup in this category.</div>`;
-    return `
-      <div class="lt-cat">
-        <div class="lt-cat-title">${title}</div>
-        ${rows}
-      </div>
-    `;
-  }).join('');
-  host.innerHTML = `<div class="longterm-head">Long-term basket</div>${sectionHtml}`;
-}
-
 async function refreshQuotesForTrades() {
   const trades = getMyTrades();
   if (!trades.length) {
@@ -1316,6 +1272,18 @@ function closeChartModal() {
 
 function chartButtonHtml(ticker) {
   return `<button class="chart-launch" type="button" data-chart="${ticker}">Chart</button>`;
+}
+
+function categoryLabelFromKey(rawKey) {
+  const k = String(rawKey || 'largecap').toLowerCase();
+  const map = {
+    largecap: ['large', 'LARGE CAP (large cap)'],
+    midcap: ['mid', 'MID CAP (mid cap)'],
+    smallcap: ['small', 'SMALL CAP (small cap)'],
+    ipo: ['ipo', 'IPO (ipo)'],
+  };
+  const pair = map[k] || ['large', 'LARGE CAP (large cap)'];
+  return { badgeClass: pair[0], labelText: pair[1] };
 }
 
 function getLtp(ticker) {
@@ -1384,15 +1352,20 @@ async function loadAndRender() {
 
   const updateCounts = (idList, val) => idList.forEach((id) => { if (document.getElementById(id)) document.getElementById(id).textContent = val; });
 
-  updateCounts(['nav-count-all', 'top-val-all'], c.all ?? allSignals.length);
-  updateCounts(['nav-count-large', 'top-val-large'], c.largecap ?? 0);
-  updateCounts(['nav-count-mid', 'top-val-mid'], c.midcap ?? 0);
-  updateCounts(['nav-count-small', 'top-val-small'], c.smallcap ?? 0);
-  updateCounts(['nav-count-ipo', 'top-val-ipo'], c.ipo ?? 0);
+  updateCounts(['top-val-all'], c.all ?? allSignals.length);
+  updateCounts(['top-val-large'], c.largecap ?? 0);
+  updateCounts(['top-val-mid'], c.midcap ?? 0);
+  updateCounts(['top-val-small'], c.smallcap ?? 0);
+  updateCounts(['top-val-ipo'], c.ipo ?? 0);
+  const fc = document.getElementById('filter-counts');
+  if (fc) {
+    fc.textContent = `All ${c.all ?? allSignals.length} · Large ${c.largecap ?? 0} · Mid ${c.midcap ?? 0} · Small ${c.smallcap ?? 0} · IPO ${c.ipo ?? 0}`;
+  }
+  document.getElementById('filter-cat').value = currentCat;
+  document.getElementById('filter-sort').value = currentSort;
   const swing = computeSwingStatus();
   updateSwingChip(swing.label, swing.cls);
   renderMarketConditionPanel();
-  renderLongTermRail();
 
   const cs = data.cache_status || {};
   const fromCache = cs.from_cache ?? data.from_cache;
@@ -1504,16 +1477,11 @@ function buildCard(sig, inWatch) {
   const div = document.createElement('div');
   div.className = `signal-card ${sig.is_candidate ? 'active-trade' : ''}`;
 
-  const cat = (sig.category || 'largecap').toUpperCase();
-  const catClass = cat.toLowerCase();
+  const { badgeClass, labelText } = categoryLabelFromKey(sig.category);
   const pattern = sig.pattern || 'Momentum Trend Candidate';
   const ltp = sig.price != null ? sig.price : sig.entry;
   const priceStr = (ltp || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const mover = sig.mover_5d_pct || 0;
-  const changeStr = sig._myTrade
-    ? `P&L vs entry ${mover >= 0 ? '+' : ''}${mover.toFixed(2)}%`
-    : `${mover >= 0 ? '+' : ''}${mover.toFixed(2)}%`;
-
   const sl = sig.sl || 0;
   const target = sig.target || 0;
   const entry = sig.entry || ltp || 0;
@@ -1526,6 +1494,20 @@ function buildCard(sig, inWatch) {
   const riskPct = entry > 0 ? ((entry - sl) / entry) * 100 : 0;
   const lowRiskHighReward = Boolean(sig.risk_bucket_low_high) || (riskPct <= 3.0 && rrNum >= 2.0);
   const highRiskHighReward = Boolean(sig.risk_bucket_high_high) || (riskPct > 3.0 && rrNum >= 2.0);
+
+  let priceDirClass = 'flat';
+  let chClass = 'flat';
+  let displayChangeStr = '';
+  if (sig._myTrade) {
+    displayChangeStr = `P&L vs entry ${mover >= 0 ? '+' : ''}${mover.toFixed(2)}%`;
+    if (mover > 0.01) { priceDirClass = 'up'; chClass = 'up'; }
+    else if (mover < -0.01) { priceDirClass = 'down'; chClass = 'down'; }
+  } else {
+    const dayCh = lastClose > 0 ? ((ltp - lastClose) / lastClose) * 100 : 0;
+    displayChangeStr = `${dayCh >= 0 ? '+' : ''}${dayCh.toFixed(2)}%`;
+    if (dayCh > 0.01) { priceDirClass = 'up'; chClass = 'up'; }
+    else if (dayCh < -0.01) { priceDirClass = 'down'; chClass = 'down'; }
+  }
 
   const range = target - sl;
   let entryPct = 30;
@@ -1558,26 +1540,25 @@ function buildCard(sig, inWatch) {
       <div class="c-ticker-top">${sig.ticker}</div>
       <div class="c-pattern-top">${pattern}</div>
     </div>
-    <div class="c-row-2">
-      <div class="c-ticker-sub">${sig.ticker}</div>
-      <div class="c-badges">
-        <span class="badge ${catClass}">${cat}</span>
+    <div class="c-row-2" style="justify-content:space-between;align-items:center;gap:10px;">
+      <div class="c-badges" style="flex-wrap:wrap;">
+        <span class="badge ${badgeClass} cat-wide">${labelText}</span>
         ${statusBadge}
-        ${chartBtn}
-        ${wlBtn}
       </div>
+      <div class="c-badges">${wlBtn}</div>
     </div>
     <div class="c-row-3">${subLine}</div>
     <div class="c-row-4">
-      <div class="c-price">₹${priceStr}</div>
-      <div class="c-change" style="color: ${mover >= 0 ? 'var(--active)' : 'var(--text-dim)'}">${changeStr}</div>
+      <div class="c-price ${priceDirClass}">₹${priceStr}</div>
+      <div class="c-change ${chClass}">${displayChangeStr}</div>
+      ${chartBtn}
     </div>
     <div class="c-metrics-grid">
-      <div class="metric-box"><div class="k">ENTRY</div><div class="v">₹${entry.toFixed(2)}</div></div>
-      <div class="metric-box"><div class="k">STOP LOSS</div><div class="v">₹${sl.toFixed(2)} (${slPct.toFixed(2)}%)</div></div>
-      <div class="metric-box"><div class="k">TARGET</div><div class="v">₹${target.toFixed(2)} (+${targetPct.toFixed(2)}%)</div></div>
+      <div class="metric-box entry"><div class="k">ENTRY</div><div class="v">₹${entry.toFixed(2)}</div></div>
+      <div class="metric-box slstop"><div class="k">STOP LOSS</div><div class="v">₹${sl.toFixed(2)} (${slPct.toFixed(2)}%)</div></div>
+      <div class="metric-box tgt"><div class="k">TARGET</div><div class="v">₹${target.toFixed(2)} (+${targetPct.toFixed(2)}%)</div></div>
       <div class="metric-box lastclose"><div class="k">LAST CLOSE</div><div class="v">₹${Number(lastClose).toFixed(2)}</div></div>
-      <div class="metric-box"><div class="k">RISK:REWARD</div><div class="v">${rrText}</div></div>
+      <div class="metric-box rr"><div class="k">RISK:REWARD</div><div class="v">${rrText}</div></div>
     </div>
     <div class="risk-columns">
       <div class="risk-chip low ${lowRiskHighReward ? 'active' : ''}">Low Risk · High Reward</div>
@@ -1629,24 +1610,18 @@ async function fullRefresh() {
   await fetchSectors();
 }
 
-document.querySelectorAll('.nav-item[data-cat]').forEach((el) => {
-  el.addEventListener('click', () => {
-    currentCat = el.dataset.cat;
-    currentView = 'all';
-    document.querySelectorAll('.nav-item[data-cat], .nav-item[data-view]').forEach((x) => x.classList.remove('active'));
-    el.classList.add('active');
-    document.querySelector('.nav-item[data-view="all"]').classList.add('active');
-    renderGrid();
-  });
+document.getElementById('filter-cat').addEventListener('change', (e) => {
+  currentCat = e.target.value;
+  currentView = 'all';
+  document.querySelectorAll('.nav-item[data-view]').forEach((x) => x.classList.remove('active'));
+  const allV = document.querySelector('.nav-item[data-view="all"]');
+  if (allV) allV.classList.add('active');
+  renderGrid();
 });
 
-document.querySelectorAll('.nav-item[data-sort]').forEach((el) => {
-  el.addEventListener('click', () => {
-    currentSort = el.dataset.sort;
-    document.querySelectorAll('.nav-item[data-sort]').forEach((x) => x.classList.remove('active'));
-    el.classList.add('active');
-    renderGrid();
-  });
+document.getElementById('filter-sort').addEventListener('change', (e) => {
+  currentSort = e.target.value;
+  renderGrid();
 });
 
 document.querySelectorAll('.nav-item[data-view]').forEach((el) => {
@@ -1666,6 +1641,14 @@ document.getElementById('search-input').addEventListener('input', (e) => {
 });
 
 document.getElementById('btn-refresh').addEventListener('click', () => triggerRefresh());
+
+document.getElementById('btn-hot-rail').addEventListener('click', () => {
+  const rail = document.getElementById('sector-rail');
+  const btn = document.getElementById('btn-hot-rail');
+  const open = !rail.classList.contains('rail-open');
+  rail.classList.toggle('rail-open', open);
+  btn.classList.toggle('on', open);
+});
 document.getElementById('chart-close').addEventListener('click', closeChartModal);
 document.getElementById('chart-modal').addEventListener('click', (e) => {
   if (e.target && e.target.id === 'chart-modal') closeChartModal();
