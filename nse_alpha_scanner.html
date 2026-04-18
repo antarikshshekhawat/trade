@@ -343,7 +343,7 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 }
 
 /* ══════════════════════════════════════════════════════════════
-   SIGNAL CARD (Exactly matching screenshot)
+   SIGNAL CARD
 ═══════════════════════════════════════════════════════════════ */
 .signal-card {
   background: var(--card);
@@ -456,6 +456,75 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
   border-radius: 4px;
   background: rgba(148, 163, 184, 0.1);
   color: var(--text-dim);
+}
+
+/* STATS GRID & RISK/REWARD */
+.c-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 16px;
+}
+.stat-box {
+  background: var(--surface);
+  border-radius: 6px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.stat-title {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+}
+.stat-value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.stat-value.val-target { color: var(--active); }
+.stat-value.val-sl { color: var(--loss); }
+
+.stat-sub {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.c-rr {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.rr-title {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+}
+.rr-value {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ipo); 
+}
+.rr-bar {
+  height: 3px;
+  width: 120px;
+  background: var(--loss);
+  border-radius: 2px;
+  display: flex;
+  margin-top: 4px;
+}
+.rr-bar-fill {
+  background: var(--ipo);
+  border-radius: 0 2px 2px 0;
 }
 
 /* Row 5: Progress Bar */
@@ -822,20 +891,43 @@ function buildCard(sig, inWatch) {
   const cat = (sig.category || 'largecap').toUpperCase();
   const catClass = cat.toLowerCase();
   const pattern = sig.pattern || 'Momentum Trend Candidate';
-  const price = (sig.entry || sig.price || 0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+  
+  // Base Variables
+  const entry = sig.entry || sig.price || 0;
+  const price = entry.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
   const mover = sig.mover_5d_pct || 0;
   const changeStr = `${mover >= 0 ? '+' : ''}${mover.toFixed(2)}%`;
   
   const sl = sig.sl || 0;
   const target = sig.target || 0;
-  
-  // Calculate relative positions for the progress bar
+  const lastClose = sig.last_close || entry;
+
+  // Percentage Calculations
+  const targetPct = entry ? (((target - entry) / entry) * 100) : 0;
+  const slPct = entry ? (((entry - sl) / entry) * 100) : 0;
+
+  // Risk Reward Calculation
+  let rrRatio = "0.0";
+  let rrRewardPct = 66; // Default visual placement for the RR bar
+  if (entry - sl > 0) {
+    const risk = entry - sl;
+    const reward = target - entry;
+    const ratio = reward / risk;
+    rrRatio = ratio.toFixed(1);
+    
+    // Determine how much of the RR bar should be yellow (reward)
+    const total = 1 + ratio;
+    rrRewardPct = (ratio / total) * 100;
+    if (rrRewardPct > 85) rrRewardPct = 85; // Cap visual length
+  }
+
+  // Calculate relative positions for the bottom progress bar
   const range = target - sl;
   let entryPct = 30; // default visual placement
   let slW = 30;
   let tgtW = 70;
-  if(range > 0 && sig.entry) {
-     entryPct = ((sig.entry - sl) / range) * 100;
+  if(range > 0 && entry) {
+     entryPct = ((entry - sl) / range) * 100;
      slW = entryPct;
      tgtW = 100 - entryPct;
   }
@@ -861,11 +953,40 @@ function buildCard(sig, inWatch) {
       <div class="c-price">₹${price}</div>
       <div class="c-change" style="color: ${mover >= 0 ? 'var(--active)' : 'var(--text-dim)'}">${changeStr}</div>
     </div>
+
+    <div class="c-stats-grid">
+      <div class="stat-box">
+        <div class="stat-title">ENTRY</div>
+        <div class="stat-value">₹${entry.toFixed(2)}</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-title">TARGET</div>
+        <div class="stat-value val-target">₹${target.toFixed(2)}</div>
+        <div class="stat-sub">+${targetPct.toFixed(2)}%</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-title">STOP LOSS</div>
+        <div class="stat-value val-sl">₹${sl.toFixed(2)}</div>
+        <div class="stat-sub">-${slPct.toFixed(2)}%</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-title">LAST CLOSE</div>
+        <div class="stat-value">₹${lastClose.toFixed(2)}</div>
+      </div>
+    </div>
+
+    <div class="c-rr">
+      <div class="rr-title">RISK : REWARD</div>
+      <div class="rr-value">1:${rrRatio}</div>
+      <div class="rr-bar">
+         <div class="rr-bar-fill" style="width: ${rrRewardPct}%; margin-left: auto;"></div>
+      </div>
+    </div>
     
     <div class="c-row-5">
       <div class="prog-labels">
-        <span>SL ${sl.toFixed(2)}</span>
-        <span>Target ${target.toFixed(2)}</span>
+        <span>SL ₹${sl.toFixed(2)}</span>
+        <span>Target ₹${target.toFixed(2)}</span>
       </div>
       <div class="prog-bar-container">
         <div class="prog-fill sl" style="width: ${slW}%"></div>
