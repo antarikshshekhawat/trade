@@ -130,7 +130,7 @@ def _mover_score(df: pd.DataFrame) -> Optional[float]:
 def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Optional[Dict]:
     try:
         frame = provider.get_ohlc(symbol=symbol, period="4mo", interval="1d")
-        if frame is None or frame.empty or len(frame) < 35:
+        if frame is None or frame.empty or len(frame) < 20:
             return None
 
         df = _prepare_indicators(frame)
@@ -187,8 +187,9 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
 
         return signal
 
-    except Exception:
-        return None
+except Exception as e:
+    print(f"ERROR in {symbol}: {e}")
+    return None
 
 
 def scan_market(
@@ -211,7 +212,7 @@ def scan_market(
 
     # ✅ FIXED INDENTATION
     for category, stocks in categorized_stocks.items():
-        stocks = stocks[:20]  # limit load
+        stocks = stocks[:40]  # limit load
         for s in stocks:
             clean_s = str(s).strip().upper().replace(".NS", "")
             if clean_s:
@@ -270,5 +271,25 @@ def scan_market(
     if top_signals:
         save_signals_cache(top_signals)
         return top_signals
+    # 🚨 FALLBACK: if no signals, still return raw data
+if not signals:
+    print("⚠️ No signals found, returning weak candidates")
 
+    for category, stocks in categorized_stocks.items():
+        for s in stocks[:10]:
+            signals.append({
+                "ticker": s,
+                "category": category,
+                "pattern": "No Strong Signal",
+                "entry": 0,
+                "sl": 0,
+                "target": 0,
+                "rr": 1,
+                "rr_text": "1:1",
+                "price": 0,
+                "candidate_score": 10,
+                "is_candidate": False
+            })
+
+    return signals[:30]
     return []
