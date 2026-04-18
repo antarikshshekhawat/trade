@@ -198,8 +198,7 @@ def scan_market(
     max_signals: int = 30,
     scan_timeout_sec: int = 40,
 ) -> List[Dict]:
-    """Orchestrates market-wide scanning returning all stocks ranked by score."""
-    
+
     if not is_market_open():
         cached = load_signals_cache()
         if cached and cached.get("signals"):
@@ -209,13 +208,16 @@ def scan_market(
             return cached["signals"]
 
     symbol_tasks = {}
-for category, stocks in categorized_stocks.items():
-    stocks = stocks[:20]   # limit per category
-    for s in stocks:
-        clean_s = str(s).strip().upper().replace(".NS", "")
-        if clean_s:
-            symbol_tasks[clean_s] = category
 
+    # ✅ FIXED INDENTATION
+    for category, stocks in categorized_stocks.items():
+        stocks = stocks[:20]  # limit load
+        for s in stocks:
+            clean_s = str(s).strip().upper().replace(".NS", "")
+            if clean_s:
+                symbol_tasks[clean_s] = category
+
+    # ✅ priority stocks
     for s in PRIORITY_SYMBOLS:
         clean_s = str(s).strip().upper().replace(".NS", "")
         if clean_s not in symbol_tasks:
@@ -224,25 +226,38 @@ for category, stocks in categorized_stocks.items():
     if not symbol_tasks:
         return []
 
-    ipo_set = set(str(s).strip().upper().replace(".NS", "") for s in categorized_stocks.get("ipo", []))
+    ipo_set = set(
+        str(s).strip().upper().replace(".NS", "")
+        for s in categorized_stocks.get("ipo", [])
+    )
+
     signals = []
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_symbol = {
-            executor.submit(scan_symbol, provider, s, cat): s 
+            executor.submit(scan_symbol, provider, s, cat): s
             for s, cat in symbol_tasks.items()
         }
+
         done, pending = wait(future_to_symbol.keys(), timeout=scan_timeout_sec)
-        for f in pending: f.cancel()
+
+        for f in pending:
+            f.cancel()
+
         for f in done:
             try:
                 res = f.result()
-                if res: signals.append(res)
-            except: continue
+                if res:
+                    signals.append(res)
+            except:
+                continue
 
-    # Rank: Candidates first, then by descending score
+    # sorting
     signals.sort(
-        key=lambda x: (int(x.get("is_candidate", False)), float(x.get("candidate_score", 0))),
+        key=lambda x: (
+            int(x.get("is_candidate", False)),
+            float(x.get("candidate_score", 0))
+        ),
         reverse=True,
     )
 
