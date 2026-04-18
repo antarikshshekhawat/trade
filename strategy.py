@@ -128,9 +128,10 @@ def _mover_score(df: pd.DataFrame) -> Optional[float]:
 # ── SCANNING LOGIC ───────────────────────────────────────────────────────────
 
 def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Optional[Dict]:
+    """Analyzes symbol and returns signal or safe fallback for non-signals."""
     try:
         frame = provider.get_ohlc(symbol=symbol, period="4mo", interval="1d")
-        if frame is None or frame.empty or len(frame) < 15:
+        if frame is None or frame.empty or len(frame) < 35:
             return None
 
         df = _prepare_indicators(frame)
@@ -144,103 +145,132 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
         prev_macdh = float(prev_row["macdh"])
         last_macdh = float(last_row["macdh"])
         min_recent_macdh = float(recent["macdh"].astype(float).min())
-
+        
         macd_cross_up = (prev_macdh < 0 and last_macdh > 0) or (
             min_recent_macdh < 0 and last_macdh > 0
         )
-
+        
         last_rsi = float(last_row["rsi14"])
         ema20 = float(last_row["ema20"])
         ema50 = float(last_row["ema50"])
+        rsi_ok = 35 <= last_rsi <= 80
+        ema_trend_ok = ema20 > ema50
 
         last_close = float(last_row["close"])
         high20_prev = float(last_row["high20_prev"])
         last_volume = float(last_row["volume"])
         vol_sma20 = float(last_row["vol_sma20"])
+        
+        # 1. Momentum Breakout
+        if last_close >= high20_prev and vol_sma20 > 0 and last_volume >= 2.0 * vol_sma20:
+            breakout = _build_signal(symbol, category, last_row, "Momentum Breakout")
+            breakout["candidate_score"] = float(_score_candidate(last_row)) + 20.0
+            breakout["is_candidate"] = True
+            breakout["mover_5d_pct"] = float(_mover_score(frame) or 0.0)
+            return breakout
 
-        ema_trend_ok = ema20 > ema50
-        rsi_ok = 40 <= last_rsi <= 75
+        # 2. MACD Reversal
+        if macd_cross_up and rsi_ok and ema_trend_ok:
+            return _build_signal(symbol, category, last_row, "MACD Cross + RSI Zone + EMA Trend")
 
-        # 🚀 1. STRONG BREAKOUT
-        if last_close >= high20_prev and vol_sma20 > 0 and last_volume >= 1.2 * vol_sma20:
-            signal = _build_signal(symbol, category, last_row, "Momentum Breakout")
+        # 3. Trend Continuation Candidate
+        if ema_trend_ok and last_macdh > 0 and 38 <= last_rsi <= 72:
+            candidate = _build_signal(symbol, category, last_row, "Momentum Trend Candidate")
+            candidate["candidate_score"] = float(_score_candidate(last_row))
+            candidate["is_candidate"] = True
+            mover = _mover_score(frame)
+            if mover is not None:
+                candidate["mover_5d_pct"] = float(mover)
+            return candidate
 
-        # 🚀 2. REVERSAL
-        elif macd_cross_up and ema_trend_ok and rsi_ok:
-            signal = _build_signal(symbol, category, last_row, "MACD + RSI + EMA")
+        # --- SAFE FALLBACK FOR ALL OTHER STOCKS ---
+        try:
+            current_close = float(last_row["close"])
+            current_score = float(_score_candidate(last_row))
+        except:
+            return None
 
-        # 🚀 3. TREND CONTINUATION
-        elif ema_trend_ok and last_macdh > 0 and 40 <= last_rsi <= 70:
-            signal = _build_signal(symbol, category, last_row, "Trend Continuation")
-
-        # 🟡 4. FALLBACK (VERY IMPORTANT)
-        else:
-            signal = _build_signal(symbol, category, last_row, "Weak Trend")
-            signal["candidate_score"] = float(_score_candidate(last_row)) - 10
-            signal["is_candidate"] = False
-            return signal
-
-        # ✅ NORMAL SIGNAL FLOW
-        signal["candidate_score"] = float(_score_candidate(last_row))
-        signal["is_candidate"] = True
-
-
-        return signal
-
-except Exception as e:
-    print(f"ERROR in {symbol}: {e}")
-    return None
+        return {
+            "ticker": symbol,
+            "category": category,
+            "pattern": "No Strong Signal",
+            "price": round(current_close, 2),
+            "entry": round(current_close, 2),
+            "target": round(current_close * 1.02, 2),
+            "sl": round(current_close * 0.98, 2),
+            "rr": 1.0,
+            "rr_text": "1:1",
+            "sl_pct": -2.0,
+            "target_pct": 2.0,
+            "candidate_score": current_score,
+            "is_candidate": False
+        }
+            
+    except Exception:
+        return None
 
 
 def scan_market(
     provider: MarketDataProvider,
     categorized_stocks: Dict[str, List[str]],
-    max_workers: int = 2,
+    max_workers: int = 5,
+    max_signals: int = 30,
     scan_timeout_sec: int = 25,
 ) -> List[Dict]:
+    """Orchestrates market-wide scanning returning all stocks ranked by score."""
+    
+    if not is_market_open():
+        cached = load_signals_cache()
+        if cached and cached.get("signals"):
+            for sig in cached["signals"]:
+                sig["_from_cache"] = True
+                sig["_cache_last_updated"] = cached.get("last_updated", "")
+            return cached["signals"]
 
     symbol_tasks = {}
-
-    # ✅ limit load (VERY IMPORTANT)
     for category, stocks in categorized_stocks.items():
-        for s in stocks[:10]:   # small load = no crash
-            clean = str(s).strip().upper().replace(".NS", "")
-            if clean:
-                symbol_tasks[clean] = category
+        for s in stocks:
+            clean_s = str(s).strip().upper().replace(".NS", "")
+            if clean_s: symbol_tasks[clean_s] = category
 
+    for s in PRIORITY_SYMBOLS:
+        clean_s = str(s).strip().upper().replace(".NS", "")
+        if clean_s not in symbol_tasks:
+            symbol_tasks[clean_s] = "smallcap"
+
+    if not symbol_tasks:
+        return []
+
+    ipo_set = set(str(s).strip().upper().replace(".NS", "") for s in categorized_stocks.get("ipo", []))
     signals = []
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [
-            executor.submit(scan_symbol, provider, s, cat)
+        future_to_symbol = {
+            executor.submit(scan_symbol, provider, s, cat): s 
             for s, cat in symbol_tasks.items()
-        ]
-
-        done, _ = wait(futures, timeout=scan_timeout_sec)
-
+        }
+        done, pending = wait(future_to_symbol.keys(), timeout=scan_timeout_sec)
+        for f in pending: f.cancel()
         for f in done:
             try:
                 res = f.result()
-                if res:
-                    signals.append(res)
-            except:
-                continue
+                if res: signals.append(res)
+            except: continue
 
-    # ✅ IMPORTANT: never return empty
-    if not signals:
-        return [{
-            "ticker": "RELIANCE",
-            "category": "largecap",
-            "pattern": "Fallback Signal",
-            "entry": 2500,
-            "sl": 2400,
-            "target": 2700,
-            "rr": 2,
-            "rr_text": "1:2",
-            "price": 2500,
-            "candidate_score": 50,
-            "is_candidate": False
-        }]
+    # Rank: Candidates first, then by descending score
+    signals.sort(
+        key=lambda x: (int(x.get("is_candidate", False)), float(x.get("candidate_score", 0))),
+        reverse=True,
+    )
 
-    return signals[:30]
+    for item in signals:
+        if item["ticker"] in ipo_set:
+            item["category"] = "ipo"
+
+    top_signals = signals[:100]
+
+    if top_signals:
+        save_signals_cache(top_signals)
+        return top_signals
+
     return []
