@@ -20,6 +20,7 @@ from data import (
     build_stock_universe,
     fetch_last_prices_nse,
     get_default_provider,
+    load_all_nse_symbols,
 )
 from sector_indices import get_sector_performance
 
@@ -59,13 +60,13 @@ def scan():
 
         categorized_stocks=universe,
 
-        max_workers=10,
+        max_workers=12,
 
         max_signals=30,
 
-        scan_timeout_sec=120,
+        scan_timeout_sec=180,
 
-        max_symbols_to_scan=120,
+        max_symbols_to_scan=200,
 
     )
 
@@ -196,13 +197,13 @@ def _refresh_signals() -> None:
 
             categorized_stocks=universe,
 
-            max_workers=10,
+            max_workers=12,
 
             max_signals=30,
 
-            scan_timeout_sec=120,
+            scan_timeout_sec=180,
 
-            max_symbols_to_scan=120,
+            max_symbols_to_scan=200,
 
         )
 
@@ -686,6 +687,16 @@ def api_quotes():
     parts = [p.strip().upper().replace(".NS", "") for p in raw.split(",") if p.strip()]
     prices = fetch_last_prices_nse(parts)
     return jsonify({"prices": prices, "generated_at": _utc_now().isoformat()})
+
+
+@app.route("/api/tickers", methods=["GET"])
+def api_tickers():
+    query = (request.args.get("q", "") or "").strip().upper().replace(".NS", "")
+    all_syms = load_all_nse_symbols()
+    if not query:
+        return jsonify({"tickers": all_syms[:80], "total": len(all_syms)})
+    filtered = [s for s in all_syms if query in s][:80]
+    return jsonify({"tickers": filtered, "total": len(filtered), "query": query})
 
 
 @app.route("/health", methods=["GET"])
