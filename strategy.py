@@ -209,11 +209,12 @@ def scan_market(
             return cached["signals"]
 
     symbol_tasks = {}
-    for category, stocks in categorized_stocks.items():
-    stocks = stocks[:20]   # 🔥 LIMIT EACH CATEGORY
-        for s in stocks:
-            clean_s = str(s).strip().upper().replace(".NS", "")
-            if clean_s: symbol_tasks[clean_s] = category
+for category, stocks in categorized_stocks.items():
+    stocks = stocks[:20]   # limit per category
+    for s in stocks:
+        clean_s = str(s).strip().upper().replace(".NS", "")
+        if clean_s:
+            symbol_tasks[clean_s] = category
 
     for s in PRIORITY_SYMBOLS:
         clean_s = str(s).strip().upper().replace(".NS", "")
