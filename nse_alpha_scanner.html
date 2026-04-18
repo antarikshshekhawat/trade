@@ -374,6 +374,10 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
   font-size: 18px;
   font-weight: 800;
   letter-spacing: 0.5px;
+  background: linear-gradient(90deg, #f8fafc, #67e8f9 65%, #c084fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 .c-pattern-top {
   font-size: 10px;
@@ -444,9 +448,12 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 }
 .c-price {
   font-family: var(--font-mono);
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 800;
-  color: var(--text);
+  background: linear-gradient(90deg, #ffffff, #fde68a 55%, #fb7185);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 .c-change {
   font-family: var(--font-mono);
@@ -589,14 +596,29 @@ body::before {
   background: linear-gradient(90deg, rgba(34, 211, 238, 0.12), transparent);
   box-shadow: inset 3px 0 0 #22d3ee;
 }
-.auto-countdown {
-  font-family: var(--font-mono);
+.market-card {
+  margin: 0 16px 12px;
+  padding: 14px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.92));
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+.market-card .label {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.market-card .value {
+  margin-top: 6px;
+  font-size: 16px;
+  font-weight: 800;
+}
+.market-card .reason {
+  margin-top: 8px;
   font-size: 11px;
   color: var(--text-dim);
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(34, 211, 238, 0.25);
-  background: rgba(34, 211, 238, 0.06);
+  line-height: 1.45;
 }
 /* My trades form */
 .my-trade-form {
@@ -702,6 +724,56 @@ body::before {
 .hot-sector-card .pct { font-family: var(--font-mono); font-size: 22px; font-weight: 800; margin-top: 8px; }
 .hot-sector-card .pct.up { color: #4ade80; }
 .hot-sector-card .pct.down { color: #f87171; }
+#longterm-host {
+  padding: 0 12px 20px;
+  border-top: 1px solid rgba(148, 163, 184, 0.08);
+}
+.longterm-head {
+  padding: 12px 4px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #c4b5fd;
+}
+.lt-cat {
+  margin-bottom: 12px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(148, 163, 184, 0.08);
+}
+.lt-cat-title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+.lt-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 0;
+  border-top: 1px solid rgba(148, 163, 184, 0.08);
+}
+.lt-item:first-of-type { border-top: 0; padding-top: 0; }
+.lt-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+.lt-meta {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.lt-tag {
+  font-size: 9px;
+  font-weight: 800;
+  color: #d8b4fe;
+  white-space: nowrap;
+}
 #sector-list {
   flex: 1;
   overflow-y: auto;
@@ -750,9 +822,21 @@ body::before {
   font-size: 11px;
   font-weight: 700;
 }
+.metric-box.lastclose .v { color: #67e8f9; }
+.chart-launch {
+  padding: 5px 8px;
+  border-radius: 7px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: #0b1220;
+  background: linear-gradient(135deg, #67e8f9, #c084fc);
+  box-shadow: 0 0 12px rgba(103, 232, 249, 0.22);
+}
+.chart-launch:hover { filter: brightness(1.08); }
 .risk-columns {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 6px;
   margin-top: 7px;
 }
@@ -770,7 +854,6 @@ body::before {
 }
 .risk-chip.low.active { background: linear-gradient(135deg, #4ade80, #22d3ee); }
 .risk-chip.high.active { background: linear-gradient(135deg, #fb7185, #f97316); color: #fff; }
-.risk-chip.long.active { background: linear-gradient(135deg, #60a5fa, #a78bfa); color: #fff; }
 .swing-chip {
   font-size: 10px;
   font-weight: 700;
@@ -946,7 +1029,6 @@ body::before {
       </div>
 
       <div class="topbar-right">
-        <div class="auto-countdown" id="auto-countdown">Next refresh: 20s</div>
         <div class="clock" id="clock">00:00:00 pm</div>
         <button class="btn-refresh" id="btn-refresh">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -987,9 +1069,11 @@ body::before {
       <div class="sector-rail-title">Hot sectors</div>
     </div>
     <div id="hot-sector-host"></div>
+    <div id="market-condition-host"></div>
     <div id="sector-list">
       <div class="sector-empty">Loading sector indices…</div>
     </div>
+    <div id="longterm-host"></div>
   </aside>
 </div>
 
@@ -1019,7 +1103,6 @@ let searchDebounce;
 const LS_WATCHLIST = 'nse_watchlist_v2';
 const LS_MY_TRADES = 'nse_my_trades_v1';
 const REFRESH_MS = 5000;
-let secLeft = 5;
 
 const getWatchlist = () => new Set(JSON.parse(localStorage.getItem(LS_WATCHLIST) || '[]'));
 const saveWatchlist = (set) => localStorage.setItem(LS_WATCHLIST, JSON.stringify([...set]));
@@ -1044,11 +1127,6 @@ function updateClock() {
 setInterval(updateClock, 1000);
 updateClock();
 
-function updateCountdownEl() {
-  const el = document.getElementById('auto-countdown');
-  if (el) el.textContent = `Next refresh: ${secLeft}s`;
-}
-
 function updateSwingChip(label, cls) {
   const chip = document.getElementById('swing-chip');
   chip.textContent = label;
@@ -1059,9 +1137,27 @@ function computeSwingStatus() {
   const total = allSignals.length || 1;
   const candidates = allSignals.filter((s) => Boolean(s.is_candidate)).length;
   const ratio = candidates / total;
-  if (ratio >= 0.42) return { label: 'GOOD', cls: 'good' };
-  if (ratio >= 0.27) return { label: 'NEUTRAL', cls: 'ok' };
-  return { label: 'AVOID', cls: 'bad' };
+  const avgTarget = allSignals.reduce((acc, s) => acc + Number(s.target_pct || 0), 0) / total;
+  const active = allSignals.filter((s) => String(s.pattern || '').toLowerCase() !== 'no strong signal').length;
+  if (ratio >= 0.42 && avgTarget >= 7.5) {
+    return {
+      label: 'GOOD',
+      cls: 'good',
+      reason: `Tradeable breadth is strong: ${candidates} quality setups, average target ${avgTarget.toFixed(1)}%, and ${active} names with active patterns.`,
+    };
+  }
+  if (ratio >= 0.27) {
+    return {
+      label: 'NEUTRAL',
+      cls: 'ok',
+      reason: `Selective market: setups exist, but leadership is uneven. Focus only on best-score names and avoid weak breakouts.`,
+    };
+  }
+  return {
+    label: 'AVOID',
+    cls: 'bad',
+    reason: `Avoid fresh swings: only ${candidates} strong setups out of ${total} signals and momentum breadth is too thin right now.`,
+  };
 }
 
 /* TOAST */
@@ -1135,6 +1231,49 @@ function renderSectorRail(d) {
   listEl.innerHTML = rows || '<div class="sector-empty">No index data</div>';
 }
 
+function renderMarketConditionPanel() {
+  const host = document.getElementById('market-condition-host');
+  const swing = computeSwingStatus();
+  host.innerHTML = `
+    <div class="market-card">
+      <div class="label">Market conditions</div>
+      <div class="value">${swing.label} for swing trades</div>
+      <div class="reason">${swing.reason}</div>
+    </div>
+  `;
+}
+
+function renderLongTermRail() {
+  const host = document.getElementById('longterm-host');
+  const cats = ['largecap', 'midcap', 'smallcap', 'ipo'];
+  const grouped = {};
+  cats.forEach((cat) => {
+    grouped[cat] = allSignals
+      .filter((s) => String(s.category || '').toLowerCase() === cat && Boolean(s.long_term_candidate))
+      .sort((a, b) => Number(b.candidate_score || 0) - Number(a.candidate_score || 0))
+      .slice(0, 3);
+  });
+  const sectionHtml = cats.map((cat) => {
+    const title = cat === 'largecap' ? 'Large Cap' : cat === 'midcap' ? 'Mid Cap' : cat === 'smallcap' ? 'Small Cap' : 'IPO';
+    const rows = (grouped[cat] || []).map((s) => `
+      <div class="lt-item">
+        <div>
+          <div class="lt-name">${s.ticker}</div>
+          <div class="lt-meta">${s.long_term_strategy || 'Accumulate gradually on dips.'}</div>
+        </div>
+        <div class="lt-tag">${s.long_term_return_band || '2x-3x / 2Y'}</div>
+      </div>
+    `).join('') || `<div class="lt-meta">No current long-term setup in this category.</div>`;
+    return `
+      <div class="lt-cat">
+        <div class="lt-cat-title">${title}</div>
+        ${rows}
+      </div>
+    `;
+  }).join('');
+  host.innerHTML = `<div class="longterm-head">Long-term basket</div>${sectionHtml}`;
+}
+
 async function refreshQuotesForTrades() {
   const trades = getMyTrades();
   if (!trades.length) {
@@ -1175,6 +1314,10 @@ function closeChartModal() {
   frame.src = 'about:blank';
 }
 
+function chartButtonHtml(ticker) {
+  return `<button class="chart-launch" type="button" data-chart="${ticker}">Chart</button>`;
+}
+
 function getLtp(ticker) {
   const s = allSignals.find((x) => x.ticker === ticker);
   if (s) return s.price != null ? s.price : s.entry;
@@ -1210,8 +1353,6 @@ function tradeToCardSig(t, ltp) {
 async function triggerRefresh() {
   const btn = document.getElementById('btn-refresh');
   btn.classList.add('spinning');
-  secLeft = 5;
-  updateCountdownEl();
   try {
     await fetch('/api/refresh', { method: 'POST' });
     showToast('Rescan started…');
@@ -1250,6 +1391,8 @@ async function loadAndRender() {
   updateCounts(['nav-count-ipo', 'top-val-ipo'], c.ipo ?? 0);
   const swing = computeSwingStatus();
   updateSwingChip(swing.label, swing.cls);
+  renderMarketConditionPanel();
+  renderLongTermRail();
 
   const cs = data.cache_status || {};
   const fromCache = cs.from_cache ?? data.from_cache;
@@ -1380,8 +1523,6 @@ function buildCard(sig, inWatch) {
   const slPct = Number(sig.sl_pct != null ? sig.sl_pct : (entry > 0 ? ((sl / entry) - 1) * 100 : 0));
   const targetPct = Number(sig.target_pct != null ? sig.target_pct : (entry > 0 ? ((target / entry) - 1) * 100 : 0));
   const duration = sig.duration || 'Mid-term';
-  const longTermBand = sig.long_term_return_band || 'Not in long-term basket';
-  const longTermCandidate = Boolean(sig.long_term_candidate);
   const riskPct = entry > 0 ? ((entry - sl) / entry) * 100 : 0;
   const lowRiskHighReward = Boolean(sig.risk_bucket_low_high) || (riskPct <= 3.0 && rrNum >= 2.0);
   const highRiskHighReward = Boolean(sig.risk_bucket_high_high) || (riskPct > 3.0 && rrNum >= 2.0);
@@ -1406,6 +1547,7 @@ function buildCard(sig, inWatch) {
   const wlBtn = sig._myTrade
     ? ''
     : `<button class="btn-add ${inWatch ? 'saved' : ''}" title="Toggle Watchlist">${inWatch ? '★' : '+'}</button>`;
+  const chartBtn = chartButtonHtml(sig.ticker);
 
   const subLine = sig._myTrade
     ? `Fixed entry ₹${(sig.entry || 0).toFixed(2)} · live LTP (updates) · SL ₹${sl.toFixed(2)} · T ₹${target.toFixed(2)}`
@@ -1421,6 +1563,7 @@ function buildCard(sig, inWatch) {
       <div class="c-badges">
         <span class="badge ${catClass}">${cat}</span>
         ${statusBadge}
+        ${chartBtn}
         ${wlBtn}
       </div>
     </div>
@@ -1433,15 +1576,14 @@ function buildCard(sig, inWatch) {
       <div class="metric-box"><div class="k">ENTRY</div><div class="v">₹${entry.toFixed(2)}</div></div>
       <div class="metric-box"><div class="k">STOP LOSS</div><div class="v">₹${sl.toFixed(2)} (${slPct.toFixed(2)}%)</div></div>
       <div class="metric-box"><div class="k">TARGET</div><div class="v">₹${target.toFixed(2)} (+${targetPct.toFixed(2)}%)</div></div>
-      <div class="metric-box"><div class="k">LAST CLOSE</div><div class="v">₹${Number(lastClose).toFixed(2)}</div></div>
+      <div class="metric-box lastclose"><div class="k">LAST CLOSE</div><div class="v">₹${Number(lastClose).toFixed(2)}</div></div>
       <div class="metric-box"><div class="k">RISK:REWARD</div><div class="v">${rrText}</div></div>
     </div>
     <div class="risk-columns">
       <div class="risk-chip low ${lowRiskHighReward ? 'active' : ''}">Low Risk · High Reward</div>
       <div class="risk-chip high ${highRiskHighReward ? 'active' : ''}">High Risk · High Reward</div>
-      <div class="risk-chip long ${longTermCandidate ? 'active' : ''}">Long-term · ${longTermCandidate ? '2x-3x / 2Y' : 'No'}</div>
     </div>
-    <div class="c-row-3" style="margin-top:2px;">Duration: ${duration} · Long-term view: ${longTermBand}</div>
+    <div class="c-row-3" style="margin-top:2px;">Duration: ${duration}</div>
     <div class="c-row-5">
       <div class="prog-labels">
         <span>SL ${sl.toFixed(2)}</span>
@@ -1456,9 +1598,13 @@ function buildCard(sig, inWatch) {
   `;
 
   const addBtn = div.querySelector('.btn-add');
-  div.addEventListener('click', () => {
-    openChartModal(sig.ticker);
-  });
+  const chartBtnEl = div.querySelector('[data-chart]');
+  if (chartBtnEl) {
+    chartBtnEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openChartModal(sig.ticker);
+    });
+  }
   if (addBtn) {
     addBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1481,8 +1627,6 @@ function buildCard(sig, inWatch) {
 async function fullRefresh() {
   await loadAndRender();
   await fetchSectors();
-  secLeft = 5;
-  updateCountdownEl();
 }
 
 document.querySelectorAll('.nav-item[data-cat]').forEach((el) => {
@@ -1555,15 +1699,9 @@ document.getElementById('btn-add-trade').addEventListener('click', () => {
   if (currentView === 'mytrades') renderGrid();
 });
 
-setInterval(() => {
-  secLeft = Math.max(0, secLeft - 1);
-  updateCountdownEl();
-}, 1000);
-
 setInterval(fullRefresh, REFRESH_MS);
 
 (async () => {
-  updateCountdownEl();
   await fullRefresh();
 })();
 </script>
