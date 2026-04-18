@@ -3,9 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import pandas_ta as ta
 from concurrent.futures import ThreadPoolExecutor, wait
-from io import StringIO
 from typing import Dict, List, Optional, Tuple
-from urllib.request import urlopen
 
 from data import MarketDataProvider
 
@@ -16,7 +14,6 @@ from cache_utils import (
     save_signals_cache,
 )
 
-NSE_ALL_STOCKS_CSV = "https://archives.nseindia.com/content/equities/EQUITY_L.csv"
 PRIORITY_SYMBOLS = [
     "SHAKTIPUMP",
     "NSDL",
@@ -28,13 +25,18 @@ PRIORITY_SYMBOLS = [
 # ── CORE UTILITIES ───────────────────────────────────────────────────────────
 
 def _prepare_indicators(frame: pd.DataFrame) -> pd.DataFrame:
-    """Calculates technical indicators and cleans data."""
-    if frame.empty:
-        return frame
+    """Calculates technical indicators and safely cleans data."""
+    if frame is None or frame.empty:
+        return pd.DataFrame()
     
     df = frame.copy()
     for col in ["open", "high", "low", "close", "volume"]:
         df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    # Ensure we have enough data points for an EMA50 BEFORE calculating
+    df.dropna(subset=["close", "volume"], inplace=True)
+    if len(df) < 50:
+        return pd.DataFrame()
 
     df["ema20"] = ta.ema(df["close"], length=20)
     df["ema50"] = ta.ema(df["close"], length=50)
@@ -47,19 +49,19 @@ def _prepare_indicators(frame: pd.DataFrame) -> pd.DataFrame:
     macd = ta.macd(df["close"], fast=12, slow=26, signal=9)
     if macd is not None and not macd.empty:
         hist_col = [col for col in macd.columns if "MACDh" in col]
-        df["macdh"] = macd[hist_col[0]] if hist_col else pd.NA
+        df["macdh"] = macd[hist_col[0]] if hist_col else 0.0
     else:
-        df["macdh"] = pd.NA
+        df["macdh"] = 0.0
         
     return df.dropna().copy()
 
 
 def _score_candidate(row: pd.Series) -> float:
-    """Improved scoring function with base score and technical weights."""
-    ema20 = float(row["ema20"])
-    ema50 = float(row["ema50"])
-    macdh = float(row["macdh"])
-    rsi14 = float(row["rsi14"])
+    """Improved scoring function with safe fallbacks."""
+    ema20 = float(row.get("ema20", 0.0))
+    ema50 = float(row.get("ema50", 0.0))
+    macdh = float(row.get("macdh", 0.0))
+    rsi14 = float(row.get("rsi14", 50.0))
     
     score = 50.0
 
@@ -75,7 +77,7 @@ def _score_candidate(row: pd.Series) -> float:
     return round(score, 2)
 
 
-def _rr_format(entry: float, sl: float, target: float) -> Tuple[Optional[float], Optional[str]]:
+def _rr_format(entry: float, sl: float, target: float) -> Tuple[float, str]:
     """Calculates Risk/Reward ratio and formats as string."""
     risk = abs(entry - sl)
     reward = abs(target - entry)
@@ -86,12 +88,14 @@ def _rr_format(entry: float, sl: float, target: float) -> Tuple[Optional[float],
 
 
 def _build_signal(ticker: str, category: str, row: pd.Series, pattern: str) -> Dict:
-    """Constructs a signal dictionary from technical data."""
-    entry = float(row["close"])
-    atr = float(row["atr14"])
+    """Constructs a signal dictionary from technical data safely."""
+    entry = max(float(row.get("close", 100.0)), 0.01) # Prevent div by zero
+    atr = float(row.get("atr14", 1.0))
+    
     sl = round(entry - 1.5 * atr, 2)
     target = round(entry + 3.0 * atr, 2)
     rr, rr_text = _rr_format(entry, sl, target)
+    
     sl_pct = round(((sl / entry) - 1) * 100, 2)
     target_pct = round(((target / entry) - 1) * 100, 2)
 
@@ -108,11 +112,11 @@ def _build_signal(ticker: str, category: str, row: pd.Series, pattern: str) -> D
         "rr": rr,
         "rr_text": rr_text,
         "price": round(entry, 2),
-        "rsi": round(float(row["rsi14"]), 2),
-        "ema20": round(float(row["ema20"]), 2),
-        "ema50": round(float(row["ema50"]), 2),
-        "atr14": round(float(row["atr14"]), 2),
-        "macd_hist": round(float(row["macdh"]), 4),
+        "rsi": round(float(row.get("rsi14", 0.0)), 2),
+        "ema20": round(float(row.get("ema20", 0.0)), 2),
+        "ema50": round(float(row.get("ema50", 0.0)), 2),
+        "atr14": round(float(row.get("atr14", 0.0)), 2),
+        "macd_hist": round(float(row.get("macdh", 0.0)), 4),
     }
 
 
@@ -131,7 +135,9 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
     """Analyzes symbol and returns signal or safe fallback for non-signals."""
     try:
         frame = provider.get_ohlc(symbol=symbol, period="4mo", interval="1d")
-        if frame is None or frame.empty or len(frame) < 35:
+        
+        # INCREASED MINIMUM LIMIT to 55 to safely support EMA50
+        if frame is None or frame.empty or len(frame) < 55:
             return None
 
         df = _prepare_indicators(frame)
@@ -142,24 +148,24 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
         prev_row = df.iloc[-2]
         last_row = df.iloc[-1]
 
-        prev_macdh = float(prev_row["macdh"])
-        last_macdh = float(last_row["macdh"])
+        prev_macdh = float(prev_row.get("macdh", 0.0))
+        last_macdh = float(last_row.get("macdh", 0.0))
         min_recent_macdh = float(recent["macdh"].astype(float).min())
         
         macd_cross_up = (prev_macdh < 0 and last_macdh > 0) or (
             min_recent_macdh < 0 and last_macdh > 0
         )
         
-        last_rsi = float(last_row["rsi14"])
-        ema20 = float(last_row["ema20"])
-        ema50 = float(last_row["ema50"])
+        last_rsi = float(last_row.get("rsi14", 50.0))
+        ema20 = float(last_row.get("ema20", 0.0))
+        ema50 = float(last_row.get("ema50", 0.0))
         rsi_ok = 35 <= last_rsi <= 80
         ema_trend_ok = ema20 > ema50
 
-        last_close = float(last_row["close"])
-        high20_prev = float(last_row["high20_prev"])
-        last_volume = float(last_row["volume"])
-        vol_sma20 = float(last_row["vol_sma20"])
+        last_close = float(last_row.get("close", 0.0))
+        high20_prev = float(last_row.get("high20_prev", 0.0))
+        last_volume = float(last_row.get("volume", 0.0))
+        vol_sma20 = float(last_row.get("vol_sma20", 0.0))
         
         # 1. Momentum Breakout
         if last_close >= high20_prev and vol_sma20 > 0 and last_volume >= 2.0 * vol_sma20:
@@ -172,7 +178,7 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
         # 2. MACD Reversal
         if macd_cross_up and rsi_ok and ema_trend_ok:
             sig = _build_signal(symbol, category, last_row, "MACD Cross + RSI Zone + EMA Trend")
-            sig["is_candidate"] = True # Ensure UI picks it up as a signal
+            sig["is_candidate"] = True 
             sig["candidate_score"] = float(_score_candidate(last_row)) + 10.0
             return sig
 
@@ -186,9 +192,9 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
                 candidate["mover_5d_pct"] = float(mover)
             return candidate
 
-        # --- SAFE FALLBACK ---
+        # --- SAFE FALLBACK FOR ALL OTHER STOCKS ---
         try:
-            current_close = float(last_row["close"])
+            current_close = float(last_row.get("close", 100.0))
             current_score = float(_score_candidate(last_row))
         except:
             return None
@@ -218,20 +224,17 @@ def scan_market(
     categorized_stocks: Dict[str, List[str]],
     max_workers: int = 15,
     max_signals: int = 30,
-    scan_timeout_sec: int = 15,  # <-- CHANGE THIS TO 15
+    scan_timeout_sec: int = 15,  
 ) -> List[Dict]:
     """Orchestrates market-wide scanning returning all stocks ranked by score."""
     
-    # Check cache first
-    cached = load_signals_cache()
-    
-    # If market is closed AND we have cache, use it.
-    # Otherwise, continue to scan to ensure we have at least 50+ items.
-    if not is_market_open() and cached and cached.get("signals"):
-        signals = cached["signals"]
-        for sig in signals:
-            sig["_from_cache"] = True
-        return signals
+    if not is_market_open():
+        cached = load_signals_cache()
+        if cached and cached.get("signals"):
+            signals = cached["signals"]
+            for sig in signals:
+                sig["_from_cache"] = True
+            return signals
 
     symbol_tasks = {}
     for category, stocks in categorized_stocks.items():
@@ -255,17 +258,20 @@ def scan_market(
             executor.submit(scan_symbol, provider, s, cat): s 
             for s, cat in symbol_tasks.items()
         }
+        
+        # Await completion up to the max timeout
         done, pending = wait(future_to_symbol.keys(), timeout=scan_timeout_sec)
-        for f in pending: f.cancel()
+        
+        # Only process completed tasks
         for f in done:
             try:
                 res = f.result()
                 if res: signals.append(res)
-            except: continue
+            except: 
+                continue
 
-    # FIXED SORTING: is_candidate=True (1) comes before is_candidate=False (0)
     signals.sort(
-        key=lambda x: (int(x.get("is_candidate", False)), float(x.get("candidate_score", 0))),
+        key=lambda x: (int(x.get("is_candidate", False)), float(x.get("candidate_score", 0.0))),
         reverse=True,
     )
 
@@ -273,7 +279,6 @@ def scan_market(
         if item["ticker"] in ipo_set:
             item["category"] = "ipo"
 
-    # Increase limit to 150 to ensure we have plenty of "fallback" stocks shown
     top_signals = signals[:150]
 
     if top_signals:
