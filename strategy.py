@@ -171,7 +171,10 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
 
         # 2. MACD Reversal
         if macd_cross_up and rsi_ok and ema_trend_ok:
-            return _build_signal(symbol, category, last_row, "MACD Cross + RSI Zone + EMA Trend")
+            sig = _build_signal(symbol, category, last_row, "MACD Cross + RSI Zone + EMA Trend")
+            sig["is_candidate"] = True # Ensure UI picks it up as a signal
+            sig["candidate_score"] = float(_score_candidate(last_row)) + 10.0
+            return sig
 
         # 3. Trend Continuation Candidate
         if ema_trend_ok and last_macdh > 0 and 38 <= last_rsi <= 72:
@@ -183,7 +186,7 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
                 candidate["mover_5d_pct"] = float(mover)
             return candidate
 
-        # --- SAFE FALLBACK FOR ALL OTHER STOCKS ---
+        # --- SAFE FALLBACK ---
         try:
             current_close = float(last_row["close"])
             current_score = float(_score_candidate(last_row))
@@ -219,13 +222,16 @@ def scan_market(
 ) -> List[Dict]:
     """Orchestrates market-wide scanning returning all stocks ranked by score."""
     
-    if not is_market_open():
-        cached = load_signals_cache()
-        if cached and cached.get("signals"):
-            for sig in cached["signals"]:
-                sig["_from_cache"] = True
-                sig["_cache_last_updated"] = cached.get("last_updated", "")
-            return cached["signals"]
+    # Check cache first
+    cached = load_signals_cache()
+    
+    # If market is closed AND we have cache, use it.
+    # Otherwise, continue to scan to ensure we have at least 50+ items.
+    if not is_market_open() and cached and cached.get("signals"):
+        signals = cached["signals"]
+        for sig in signals:
+            sig["_from_cache"] = True
+        return signals
 
     symbol_tasks = {}
     for category, stocks in categorized_stocks.items():
@@ -257,7 +263,7 @@ def scan_market(
                 if res: signals.append(res)
             except: continue
 
-    # Rank: Candidates first, then by descending score
+    # FIXED SORTING: is_candidate=True (1) comes before is_candidate=False (0)
     signals.sort(
         key=lambda x: (int(x.get("is_candidate", False)), float(x.get("candidate_score", 0))),
         reverse=True,
@@ -267,7 +273,8 @@ def scan_market(
         if item["ticker"] in ipo_set:
             item["category"] = "ipo"
 
-    top_signals = signals[:100]
+    # Increase limit to 150 to ensure we have plenty of "fallback" stocks shown
+    top_signals = signals[:150]
 
     if top_signals:
         save_signals_cache(top_signals)
