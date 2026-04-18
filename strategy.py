@@ -22,6 +22,9 @@ PRIORITY_SYMBOLS = [
     "FIRSTSOURCE",
 ]
 
+TARGET_MIN_PCT = 6.0
+CORE_CATEGORIES = ("largecap", "midcap", "smallcap", "ipo")
+
 # ── CORE UTILITIES ───────────────────────────────────────────────────────────
 
 def _prepare_indicators(frame: pd.DataFrame) -> pd.DataFrame:
@@ -93,7 +96,8 @@ def _build_signal(ticker: str, category: str, row: pd.Series, pattern: str) -> D
     atr = float(row.get("atr14", 1.0))
     
     sl = round(entry - 1.5 * atr, 2)
-    target = round(entry + 3.0 * atr, 2)
+    min_target = entry * (1.0 + TARGET_MIN_PCT / 100.0)
+    target = round(max(entry + 3.0 * atr, min_target), 2)
     rr, rr_text = _rr_format(entry, sl, target)
     
     sl_pct = round(((sl / entry) - 1) * 100, 2)
@@ -167,12 +171,15 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
         last_volume = float(last_row.get("volume", 0.0))
         vol_sma20 = float(last_row.get("vol_sma20", 0.0))
         
+        prev_close = float(frame["close"].iloc[-2]) if len(frame) >= 2 else float(last_row.get("close", 0.0))
+
         # 1. Momentum Breakout
         if last_close >= high20_prev and vol_sma20 > 0 and last_volume >= 2.0 * vol_sma20:
             breakout = _build_signal(symbol, category, last_row, "Momentum Breakout")
             breakout["candidate_score"] = float(_score_candidate(last_row)) + 20.0
             breakout["is_candidate"] = True
             breakout["mover_5d_pct"] = float(_mover_score(frame) or 0.0)
+            breakout["last_close"] = round(prev_close, 2)
             return breakout
 
         # 2. MACD Reversal
@@ -180,6 +187,7 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
             sig = _build_signal(symbol, category, last_row, "MACD Cross + RSI Zone + EMA Trend")
             sig["is_candidate"] = True 
             sig["candidate_score"] = float(_score_candidate(last_row)) + 10.0
+            sig["last_close"] = round(prev_close, 2)
             return sig
 
         # 3. Trend Continuation Candidate
@@ -190,6 +198,7 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
             mover = _mover_score(frame)
             if mover is not None:
                 candidate["mover_5d_pct"] = float(mover)
+            candidate["last_close"] = round(prev_close, 2)
             return candidate
 
         # --- SAFE FALLBACK FOR ALL OTHER STOCKS ---
@@ -205,12 +214,13 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
             "pattern": "No Strong Signal",
             "price": round(current_close, 2),
             "entry": round(current_close, 2),
-            "target": round(current_close * 1.02, 2),
+            "target": round(current_close * 1.06, 2),
             "sl": round(current_close * 0.98, 2),
-            "rr": 1.0,
-            "rr_text": "1:1",
+            "rr": 3.0,
+            "rr_text": "1:3.0",
             "sl_pct": -2.0,
-            "target_pct": 2.0,
+            "target_pct": 6.0,
+            "last_close": round(prev_close, 2),
             "candidate_score": current_score,
             "is_candidate": False
         }
@@ -238,22 +248,27 @@ def scan_market(
             return signals
 
     symbol_tasks: Dict[str, str] = {}
+    by_category: Dict[str, List[str]] = {c: [] for c in CORE_CATEGORIES}
     for category, stocks in categorized_stocks.items():
+        cat = str(category).strip().lower()
+        if cat not in by_category:
+            by_category[cat] = []
         for s in stocks:
             clean_s = str(s).strip().upper().replace(".NS", "")
-            if clean_s:
-                symbol_tasks[clean_s] = category
+            if clean_s and clean_s not in symbol_tasks:
+                symbol_tasks[clean_s] = cat
+                by_category[cat].append(clean_s)
 
     for s in PRIORITY_SYMBOLS:
         clean_s = str(s).strip().upper().replace(".NS", "")
-        if clean_s not in symbol_tasks:
+        if clean_s and clean_s not in symbol_tasks:
             symbol_tasks[clean_s] = "smallcap"
+            by_category.setdefault("smallcap", []).append(clean_s)
 
     if not symbol_tasks:
         return []
 
-    # Cap how many tickers we hit per run so Yahoo Finance calls can finish
-    # before wait() times out (cloud IPs are often slow / rate-limited).
+    # Balanced round-robin scan order so each category gets enough attempts.
     ordered: List[Tuple[str, str]] = []
     seen: set[str] = set()
     for s in PRIORITY_SYMBOLS:
@@ -261,10 +276,28 @@ def scan_market(
         if clean_s in symbol_tasks and clean_s not in seen:
             ordered.append((clean_s, symbol_tasks[clean_s]))
             seen.add(clean_s)
-    for sym, cat in symbol_tasks.items():
-        if sym not in seen:
+
+    round_robin_cats = [c for c in CORE_CATEGORIES if by_category.get(c)]
+    idx_map = {c: 0 for c in round_robin_cats}
+    while len(ordered) < max_symbols_to_scan and round_robin_cats:
+        progressed = False
+        for cat in list(round_robin_cats):
+            symbols = by_category.get(cat, [])
+            i = idx_map[cat]
+            if i >= len(symbols):
+                round_robin_cats.remove(cat)
+                continue
+            sym = symbols[i]
+            idx_map[cat] += 1
+            if sym in seen:
+                continue
             ordered.append((sym, cat))
             seen.add(sym)
+            progressed = True
+            if len(ordered) >= max_symbols_to_scan:
+                break
+        if not progressed:
+            break
     ordered = ordered[:max_symbols_to_scan]
 
     ipo_set = set(str(s).strip().upper().replace(".NS", "") for s in categorized_stocks.get("ipo", []))
@@ -288,7 +321,15 @@ def scan_market(
         for f in done:
             try:
                 res = f.result()
-                if res: signals.append(res)
+                if res:
+                    # Normalize risk bucket labels for UI
+                    entry = float(res.get("entry") or res.get("price") or 0.0)
+                    sl = float(res.get("sl") or 0.0)
+                    rr = float(res.get("rr") or 0.0)
+                    risk_pct = ((entry - sl) / entry * 100.0) if entry > 0 else 0.0
+                    res["risk_bucket_low_high"] = bool(risk_pct <= 3.0 and rr >= 2.0)
+                    res["risk_bucket_high_high"] = bool(risk_pct > 3.0 and rr >= 2.0)
+                    signals.append(res)
             except: 
                 continue
 
@@ -301,7 +342,36 @@ def scan_market(
         if item["ticker"] in ipo_set:
             item["category"] = "ipo"
 
-    top_signals = signals[:150]
+    # Enforce broad category representation where data is available.
+    per_cat: Dict[str, List[Dict]] = {c: [] for c in CORE_CATEGORIES}
+    for row in signals:
+        cat = str(row.get("category") or "").lower()
+        per_cat.setdefault(cat, []).append(row)
+
+    selected: List[Dict] = []
+    seen_tickers: set[str] = set()
+    min_per_category = 15
+    max_per_category = 20
+    for cat in CORE_CATEGORIES:
+        picks = per_cat.get(cat, [])[:max_per_category]
+        for row in picks:
+            tk = str(row.get("ticker") or "")
+            if tk and tk not in seen_tickers:
+                selected.append(row)
+                seen_tickers.add(tk)
+                if len([x for x in selected if str(x.get("category", "")).lower() == cat]) >= min_per_category:
+                    # Keep selecting up to max_per_category, but min target is guaranteed.
+                    pass
+
+    for row in signals:
+        if len(selected) >= 180:
+            break
+        tk = str(row.get("ticker") or "")
+        if tk and tk not in seen_tickers:
+            selected.append(row)
+            seen_tickers.add(tk)
+
+    top_signals = selected[:180]
 
     if top_signals:
         save_signals_cache(top_signals)
