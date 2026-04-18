@@ -1163,7 +1163,7 @@ function render() {
 
     el.innerHTML = `
       <div class="card-head">
-  <div class="card-head-l">
+  
     <div class="ticker">
       ${esc(ticker)}
       ${wl ? '<span class="wl-star">★</span>' : ""}
@@ -1433,7 +1433,33 @@ async function fetchSignals(manual=false) {
     setTimeout(() => btn.classList.remove("spin"), 600);
   }
 }
+function toggleWL(ticker, e){
+  e.stopPropagation();
 
+  // find High Priority
+  let wl = S.watchlists.find(w => w.name.includes("High Priority"));
+
+  // create if not exists
+  if(!wl){
+    wl = {
+      id: "hp",
+      name: "⚡ High Priority",
+      tickers: []
+    };
+    S.watchlists.push(wl);
+  }
+
+  // toggle
+  if(wl.tickers.includes(ticker)){
+    wl.tickers = wl.tickers.filter(t => t !== ticker);
+  } else {
+    wl.tickers.push(ticker);
+  }
+
+  saveWL();
+  renderWLSidebar();
+  render();
+}
 /* ═══════════════════════════════════════════════════════════════
    INIT
 ═══════════════════════════════════════════════════════════════ */
