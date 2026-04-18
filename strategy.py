@@ -216,9 +216,9 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
 def scan_market(
     provider: MarketDataProvider,
     categorized_stocks: Dict[str, List[str]],
-    max_workers: int = 5,
+    max_workers: int = 15,
     max_signals: int = 30,
-    scan_timeout_sec: int = 25,
+    scan_timeout_sec: int = 15,  # <-- CHANGE THIS TO 15
 ) -> List[Dict]:
     """Orchestrates market-wide scanning returning all stocks ranked by score."""
     
