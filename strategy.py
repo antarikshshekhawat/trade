@@ -184,9 +184,6 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
         signal["candidate_score"] = float(_score_candidate(last_row))
         signal["is_candidate"] = True
 
-        # ✅ RELAXED RR FILTER
-        if signal["rr"] < 1.1:
-            return None
 
         return signal
 
@@ -197,9 +194,9 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
 def scan_market(
     provider: MarketDataProvider,
     categorized_stocks: Dict[str, List[str]],
-    max_workers: int = 5,
+    max_workers: int = 3,
     max_signals: int = 30,
-    scan_timeout_sec: int = 25,
+    scan_timeout_sec: int = 40,
 ) -> List[Dict]:
     """Orchestrates market-wide scanning returning all stocks ranked by score."""
     
@@ -213,6 +210,7 @@ def scan_market(
 
     symbol_tasks = {}
     for category, stocks in categorized_stocks.items():
+    stocks = stocks[:20]   # 🔥 LIMIT EACH CATEGORY
         for s in stocks:
             clean_s = str(s).strip().upper().replace(".NS", "")
             if clean_s: symbol_tasks[clean_s] = category
