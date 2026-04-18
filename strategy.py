@@ -224,10 +224,11 @@ def scan_market(
     categorized_stocks: Dict[str, List[str]],
     max_workers: int = 15,
     max_signals: int = 30,
-    scan_timeout_sec: int = 15,  
+    scan_timeout_sec: int = 90,
+    max_symbols_to_scan: int = 120,
 ) -> List[Dict]:
     """Orchestrates market-wide scanning returning all stocks ranked by score."""
-    
+
     if not is_market_open():
         cached = load_signals_cache()
         if cached and cached.get("signals"):
@@ -236,11 +237,12 @@ def scan_market(
                 sig["_from_cache"] = True
             return signals
 
-    symbol_tasks = {}
+    symbol_tasks: Dict[str, str] = {}
     for category, stocks in categorized_stocks.items():
         for s in stocks:
             clean_s = str(s).strip().upper().replace(".NS", "")
-            if clean_s: symbol_tasks[clean_s] = category
+            if clean_s:
+                symbol_tasks[clean_s] = category
 
     for s in PRIORITY_SYMBOLS:
         clean_s = str(s).strip().upper().replace(".NS", "")
@@ -250,18 +252,38 @@ def scan_market(
     if not symbol_tasks:
         return []
 
+    # Cap how many tickers we hit per run so Yahoo Finance calls can finish
+    # before wait() times out (cloud IPs are often slow / rate-limited).
+    ordered: List[Tuple[str, str]] = []
+    seen: set[str] = set()
+    for s in PRIORITY_SYMBOLS:
+        clean_s = str(s).strip().upper().replace(".NS", "")
+        if clean_s in symbol_tasks and clean_s not in seen:
+            ordered.append((clean_s, symbol_tasks[clean_s]))
+            seen.add(clean_s)
+    for sym, cat in symbol_tasks.items():
+        if sym not in seen:
+            ordered.append((sym, cat))
+            seen.add(sym)
+    ordered = ordered[:max_symbols_to_scan]
+
     ipo_set = set(str(s).strip().upper().replace(".NS", "") for s in categorized_stocks.get("ipo", []))
     signals = []
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_symbol = {
-            executor.submit(scan_symbol, provider, s, cat): s 
-            for s, cat in symbol_tasks.items()
+            executor.submit(scan_symbol, provider, s, cat): s
+            for s, cat in ordered
         }
-        
-        # Await completion up to the max timeout
+
         done, pending = wait(future_to_symbol.keys(), timeout=scan_timeout_sec)
-        
+        if pending:
+            print(
+                f"[scan_market] timeout {scan_timeout_sec}s: "
+                f"completed {len(done)}/{len(future_to_symbol)}, "
+                f"dropped {len(pending)} pending"
+            )
+
         # Only process completed tasks
         for f in done:
             try:
