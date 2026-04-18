@@ -999,7 +999,7 @@ a{color:inherit;text-decoration:none}
 /* ═══════════════════════════════════════════════════════════════
    CONFIG
 ═══════════════════════════════════════════════════════════════ */
-const API_URL = "/signals";;
+const API_URL = "/signals";
 const POLL_MS   = 12000;
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1162,8 +1162,9 @@ function render() {
     el.style.animationDelay = `${Math.min(idx, 10) * 0.028}s`;
 
     el.innerHTML = `
-      <div class="card-head">
-  
+    <div class="card-head">
+
+  <div class="card-head-l">
     <div class="ticker">
       ${esc(ticker)}
       ${wl ? '<span class="wl-star">★</span>' : ""}
@@ -1172,6 +1173,18 @@ function render() {
       <div class="pdot"></div>${esc(pattern)}
     </div>
   </div>
+
+  <div class="card-badges">
+    ${isLocked ? `<span class="sbadge s-locked">🔒 LOCKED</span>` : ""}
+    <span class="badge ${cat}">${catLabel(cat)}</span>
+    <span class="sbadge s-${status}">${statusLabel(status)}</span>
+
+    <button class="add-btn" onclick="toggleWL('${ticker}', event)">
+      ${wl ? "−" : "+"}
+    </button>
+  </div>
+
+</div>
 
   <div class="card-badges">
     ${isLocked ? `<span class="sbadge s-locked">🔒 LOCKED</span>` : ""}
@@ -1207,7 +1220,39 @@ function render() {
 
 <div class="kv-grid">
 
-      </div>
+  <div class="kv">
+    <div class="kv-lbl">Entry</div>
+    <div class="kv-val">₹${fmt(entry)}</div>
+  </div>
+
+  <div class="kv">
+    <div class="kv-lbl">Target</div>
+    <div class="kv-val go">₹${fmt(target)}</div>
+    <div class="kv-sub">+${fmt(tPct)}%</div>
+  </div>
+
+  <div class="kv">
+    <div class="kv-lbl">Stop Loss</div>
+    <div class="kv-val stop">₹${fmt(sl)}</div>
+    <div class="kv-sub">${fmt(slPct)}%</div>
+  </div>
+
+  <div class="kv">
+    <div class="kv-lbl">Last Close</div>
+    <div class="kv-val">₹${fmt(price)}</div>
+  </div>
+
+  <div class="kv">
+    <div class="kv-lbl">Risk : Reward</div>
+    <div class="kv-val warn">${rrText}</div>
+
+    <div class="rr-track">
+      <div class="rr-risk"></div>
+      <div class="rr-reward"></div>
+    </div>
+  </div>
+
+</div>
 
       <div class="prog-wrap">
         <div class="prog-meta">
