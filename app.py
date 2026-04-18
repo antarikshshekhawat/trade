@@ -1,322 +1,182 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from threading import Lock, Thread
-from typing import Dict, List
+import threading
+import time
+import logging
+from typing import Any, Dict
 
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, jsonify, render_template, request
 
-from data import FALLBACK_IPO_STOCKS, FALLBACK_UNIVERSE, build_stock_universe, get_default_provider
+from data import MarketDataProvider
 from strategy import scan_market
 
-# ── NEW: cache helpers ────────────────────────────────────────────────────────
-from cache_utils import get_cache_meta, is_market_open, load_signals_cache
-# ─────────────────────────────────────────────────────────────────────────────
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-@app.route("/")
-def home():
-    return send_from_directory(".", "nse_alpha_scanner.html")
-@app.route("/scan")
-def scan():
-    signals = scan_market()
-    return jsonify(signals)
+# ── DATA PROVIDER (shared across threads) ────────────────────────────────────
+provider = MarketDataProvider(cache_size=400)
 
-_cache_lock = Lock()
-_cache: Dict[str, object] = {
-    "signals": [],
-    "generated_at": None,
-    "expires_at": 0.0,
-    "refreshing": False,
-    "last_error": None,
-    "last_nonempty_signals": [],
-    "last_nonempty_generated_at": None,
+# ── STOCK UNIVERSE ────────────────────────────────────────────────────────────
+# Large-cap: Nifty 50 & Nifty Next 50 selections
+LARGE_CAP = [
+    "RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "INFY",
+    "SBIN", "BAJFINANCE", "BHARTIARTL", "KOTAKBANK", "LT",
+    "AXISBANK", "ASIANPAINT", "MARUTI", "TITAN", "SUNPHARMA",
+    "WIPRO", "ULTRACEMCO", "M&M", "NTPC", "POWERGRID",
+    "TECHM", "HCLTECH", "BAJAJ-AUTO", "EICHERMOT", "INDUSINDBK",
+    "JSWSTEEL", "TATASTEEL", "COALINDIA", "APOLLOHOSP", "NESTLEIND",
+    "HINDUNILVR", "DIVISLAB", "CIPLA", "DRREDDY", "ONGC",
+    "IOC", "BPCL", "TATACONSUM", "BRITANNIA", "HEROMOTOCO",
+    "GRASIM", "SHREECEM", "ADANIENT", "ADANIPORTS", "TATAPOWER",
+    "NHPC", "RECLTD", "PFC", "HAL", "BEL",
+]
+
+# Mid-cap: Nifty Midcap 150 selections
+MID_CAP = [
+    "ABCAPITAL", "ASHOKLEY", "ASTRAL", "AUBANK", "BALKRISIND",
+    "BATAINDIA", "BERGEPAINT", "BHEL", "CAMS", "CHOLAFIN",
+    "COFORGE", "CONCOR", "CROMPTON", "DEEPAKNTR", "DIXON",
+    "ESCORTS", "EXIDEIND", "FEDERALBNK", "FORTIS", "GODREJPROP",
+    "GRANULES", "HAL", "HONASA", "HUDCO", "IDFCFIRSTB",
+    "IEXINDIA", "INDHOTEL", "IRFC", "KALYANKJIL", "KPIL",
+    "LAURUSLABS", "LTFH", "LUPIN", "MAXHEALTH", "METROPOLIS",
+    "MPHASIS", "MUTHOOTFIN", "NCC", "OBEROIRLTY", "PAGEIND",
+    "PATANJALI", "PETRONET", "PIIND", "POLYCAB", "PRESTIGE",
+    "TRENT", "VARUNBEV", "VOLTAS", "ZYDUSLIFE", "NAUKRI",
+]
+
+# Small-cap selections
+SMALL_CAP = [
+    "SHAKTIPUMP", "FIRSTSOURCE", "GMDS", "WAAREEENER",
+    "APLAPOLLO", "APTUS", "BIKAJI", "BLUESTARCO", "CHAMBLFERT",
+    "CRAFTSMAN", "CUMMINSIND", "ELGIEQUIP", "ENGINERSIN",
+    "GLAXO", "GNFC", "GSFC", "HFCL", "INOXWIND",
+    "ITI", "JYOTHYLAB", "KANSAINER", "KAYNES", "LICI",
+    "LINDEINDIA", "NATIONALUM", "NIACL", "NLCINDIA",
+    "NUVAMA", "OIL", "PCBL", "PHOENIXLTD", "PRINCEPIPES",
+    "RHIM", "SAFARI", "SAILONG", "SOLARINDS", "SUPPETRO",
+    "TATACHEM", "THERMAX", "TIINDIA", "TRITURBINE", "ZENSARTECH",
+]
+
+# Recent IPOs (update periodically)
+IPO = [
+    "NSDL", "NYKAA", "PAYTM", "ZOMATO", "POLICYBZR",
+    "DELHIVERY", "MAPMYINDIA", "IDEAFORGE", "NETWEB",
+]
+
+CATEGORIZED_STOCKS = {
+    "largecap": LARGE_CAP,
+    "midcap":   MID_CAP,
+    "smallcap": SMALL_CAP,
+    "ipo":      IPO,
 }
 
-CACHE_SECONDS = 12
-UNIVERSE_CACHE_SECONDS = 600
-_universe_cache: Dict[str, object] = {
-    "stocks": {
-        "largecap": FALLBACK_UNIVERSE["largecap"],
-        "midcap": FALLBACK_UNIVERSE["midcap"],
-        "smallcap": FALLBACK_UNIVERSE["smallcap"],
-        "ipo": FALLBACK_IPO_STOCKS,
-    },
-    "expires_at": 0.0,
-}
+# ── SIGNAL CACHE (in-memory) ─────────────────────────────────────────────────
+_scan_lock    = threading.Lock()
+_cached_signals: list = []
+_last_scan_ts: float  = 0.0
+SCAN_TTL_SEC          = 300          # re-scan every 5 min during market hours
 
 
-@app.after_request
-def apply_cors_headers(response):
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
-    response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-    return response
-
-
-def _utc_now() -> datetime:
-    return datetime.now(timezone.utc)
-
-
-def _refresh_signals() -> None:
-    with _cache_lock:
-        if _cache["refreshing"]:
-            return
-        _cache["refreshing"] = True
-
-    generated_at = _utc_now().isoformat()
-    universe = _get_universe_cached()
-    provider = get_default_provider()
+def _do_scan() -> list:
+    global _cached_signals, _last_scan_ts
     try:
-        signals = scan_market(
+        results = scan_market(
             provider=provider,
-            categorized_stocks=universe,
-            max_workers=20,
-            max_signals=30,
-            scan_timeout_sec=22,
+            categorized_stocks=CATEGORIZED_STOCKS,
+            max_workers=10,
+            max_signals=60,
+            scan_timeout_sec=45,
         )
-        with _cache_lock:
-            _cache["signals"] = signals
-            _cache["generated_at"] = generated_at
-            _cache["expires_at"] = _utc_now().timestamp() + CACHE_SECONDS
-            _cache["last_error"] = None
-            if signals:
-                _cache["last_nonempty_signals"] = signals
-                _cache["last_nonempty_generated_at"] = generated_at
-    except Exception as exc:
-        with _cache_lock:
-            _cache["last_error"] = str(exc)
-    finally:
-        with _cache_lock:
-            _cache["refreshing"] = False
+        with _scan_lock:
+            _cached_signals = results
+            _last_scan_ts   = time.time()
+        return results
+    except Exception as e:
+        logger.error("Scan failed: %s", e)
+        return _cached_signals
 
 
-def _trigger_refresh_if_needed() -> None:
-    now_ts = _utc_now().timestamp()
-    with _cache_lock:
-        is_stale = now_ts >= float(_cache["expires_at"])
-        already_refreshing = bool(_cache["refreshing"])
-    if is_stale and not already_refreshing:
-        worker = Thread(target=_refresh_signals, daemon=True)
-        worker.start()
+def _get_signals(force: bool = False) -> list:
+    """Return cached signals or trigger a fresh scan."""
+    age = time.time() - _last_scan_ts
+    if force or not _cached_signals or age > SCAN_TTL_SEC:
+        return _do_scan()
+    return _cached_signals
 
 
-def _get_signals_cached() -> Dict[str, object]:
-    _trigger_refresh_if_needed()
-    with _cache_lock:
-        return {
-            "signals": _cache["signals"],
-            "generated_at": _cache["generated_at"],
-            "cached": True,
-            "refreshing": _cache["refreshing"],
-            "last_error": _cache["last_error"],
-            "last_nonempty_signals": _cache["last_nonempty_signals"],
-            "last_nonempty_generated_at": _cache["last_nonempty_generated_at"],
-        }
+# ── BACKGROUND SCANNER ────────────────────────────────────────────────────────
+
+def _background_scanner():
+    """Periodically refreshes signals in the background."""
+    time.sleep(5)                    # give app a moment to start
+    while True:
+        try:
+            _do_scan()
+        except Exception as e:
+            logger.error("Background scan error: %s", e)
+        time.sleep(SCAN_TTL_SEC)
 
 
-def _normalize_signal(item: Dict) -> Dict:
-    ticker = str(item.get("ticker") or item.get("symbol") or "UNKNOWN")
-    category = str(item.get("category") or "largecap")
+_bg_thread = threading.Thread(target=_background_scanner, daemon=True)
+_bg_thread.start()
 
-    entry = float(item.get("entry") or item.get("price") or 100.0)
-    price = float(item.get("price") or entry)
 
-    sl = float(item.get("sl") or item.get("stop_loss") or round(entry * 0.97, 2))
-    target = float(item.get("target") or round(entry * 1.06, 2))
+# ── ROUTES ────────────────────────────────────────────────────────────────────
 
-    rr_val = item.get("rr") if item.get("rr") is not None else item.get("risk_reward")
-    rr = float(rr_val) if rr_val is not None else round((target - entry) / max(entry - sl, 0.01), 2)
-    rr_text = str(item.get("rr_text") or f"1:{rr}")
+@app.route("/")
+def index():
+    return render_template("index.html")
 
-    sl_pct = float(item.get("sl_pct") if item.get("sl_pct") is not None else round((sl / entry - 1) * 100, 2))
-    target_pct = float(
-        item.get("target_pct") if item.get("target_pct") is not None else round((target / entry - 1) * 100, 2)
+
+@app.route("/api/signals")
+def api_signals():
+    category = request.args.get("category", "all").lower()
+    signals  = _get_signals()
+
+    if category != "all":
+        signals = [s for s in signals if s.get("category", "").lower() == category]
+
+    # Build category counts for the header bar
+    counts: Dict[str, int] = {"all": len(_cached_signals)}
+    for cat_key in ("largecap", "midcap", "smallcap", "ipo"):
+        counts[cat_key] = sum(
+            1 for s in _cached_signals if s.get("category", "").lower() == cat_key
+        )
+
+    from_cache     = any(s.get("_from_cache") for s in signals)
+    last_updated   = next(
+        (s.get("_cache_last_updated", "") for s in signals if s.get("_from_cache")),
+        "",
     )
 
-    pattern = str(item.get("pattern") or "MACD + RSI")
-
-    # ✅ ADD THIS LINE
-    last_close = float(item.get("last_close") or item.get("prev_close") or entry)
-
-    return {
-        "ticker": ticker,
-        "price": round(price, 2),
-        "entry": round(entry, 2),
-        "target": round(target, 2),
-        "sl": round(sl, 2),
-        "rr": round(rr, 2),
-        "rr_text": rr_text,
-        "pattern": pattern,
-        "category": category,
-        "sl_pct": round(sl_pct, 2),
-        "target_pct": round(target_pct, 2),
-
-        # ✅ ADD THIS FIELD
-        "last_close": round(last_close, 2),
-    }
-
-
-def _fallback_from_universe() -> List[Dict]:
-    universe = _get_universe_cached()
-    rows: List[Dict] = []
-    for category, symbols in universe.items():
-        for symbol in symbols[:5]:
-            rows.append(
-                _normalize_signal(
-                    {
-                        "ticker": symbol,
-                        "category": category,
-                        "price": 100.0,
-                        "entry": 100.0,
-                        "target": 106.0,
-                        "sl": 97.0,
-                        "rr": 2.0,
-                        "rr_text": "1:2.0",
-                        "pattern": "Top Mover (fallback)",
-                        "sl_pct": -3.0,
-                        "target_pct": 6.0,
-                    }
-                )
-            )
-    return rows[:20]
-
-
-def _get_universe_cached() -> Dict[str, List[str]]:
-    now_ts = _utc_now().timestamp()
-    with _cache_lock:
-        if now_ts < float(_universe_cache["expires_at"]):
-            return _universe_cache["stocks"]  # type: ignore[return-value]
-
-    stocks = build_stock_universe()
-    with _cache_lock:
-        _universe_cache["stocks"] = stocks
-        _universe_cache["expires_at"] = _utc_now().timestamp() + UNIVERSE_CACHE_SECONDS
-    return stocks
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Helper: build cache-status metadata block for every /signals response
-# ─────────────────────────────────────────────────────────────────────────────
-def _build_cache_status(signals_list: List[Dict]) -> Dict:
-    """
-    Returns a metadata dict that tells the frontend:
-      - whether the data is live or from disk cache
-      - when the signals were last saved to disk
-      - whether the market is currently open
-    """
-    market_open = is_market_open()
-    from_cache = any(bool(s.get("_from_cache")) for s in signals_list)
-
-    last_updated = None
-    for sig in signals_list:
-        ts = sig.get("_cache_last_updated")
-        if ts:
-            last_updated = ts
-            break
-    if last_updated is None:
-        disk_meta = get_cache_meta()
-        last_updated = disk_meta.get("last_updated")
-
-    return {
-        "market_open": market_open,
-        "from_cache": from_cache,
+    return jsonify({
+        "signals":      signals,
+        "counts":       counts,
+        "from_cache":   from_cache,
         "last_updated": last_updated,
-        "status_label": (
-            "Live signals"
-            if (market_open and not from_cache)
-            else "Using last market signals"
-        ),
-    }
-
-
-@app.route("/stocks", methods=["GET"])
-def stocks():
-    universe = _get_universe_cached()
-    counts = {category: len(items) for category, items in universe.items()}
-    return jsonify(
-        {
-            "stocks": universe,
-            "counts": counts,
-            "generated_at": _utc_now().isoformat(),
-        }
-    )
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# UPDATED /signals endpoint — now wraps signals in an envelope with
-# cache_status so the frontend can show "Using last market signals" badge
-# ─────────────────────────────────────────────────────────────────────────────
-@app.route("/signals", methods=["GET"])
-def signals():
-    payload = _get_signals_cached()
-    signals_list: List[Dict] = payload["signals"]  # type: ignore[assignment]
-
-    # ── Priority 1: live in-memory signals ───────────────────────────────────
-    normalized = [_normalize_signal(item) for item in signals_list if isinstance(item, dict)]
-    if normalized:
-        cache_status = _build_cache_status(signals_list)
-        return jsonify({
-            "signals": normalized,
-            "cache_status": cache_status,
-            "generated_at": payload.get("generated_at"),
-        })
-
-    # ── Priority 2: last non-empty in-memory signals ─────────────────────────
-    last_nonempty: List[Dict] = payload.get("last_nonempty_signals") or []  # type: ignore[assignment]
-    normalized_last = [_normalize_signal(item) for item in last_nonempty if isinstance(item, dict)]
-    if normalized_last:
-        cache_status = _build_cache_status(last_nonempty)
-        cache_status["from_cache"] = True
-        cache_status["status_label"] = "Using last market signals"
-        return jsonify({
-            "signals": normalized_last,
-            "cache_status": cache_status,
-            "generated_at": payload.get("last_nonempty_generated_at"),
-        })
-
-    # ── Priority 3: persistent disk cache (signals_cache.json) ───────────────
-    disk = load_signals_cache()
-    if disk and disk.get("signals"):
-        disk_signals = [_normalize_signal(s) for s in disk["signals"] if isinstance(s, dict)]
-        if disk_signals:
-            return jsonify({
-                "signals": disk_signals,
-                "cache_status": {
-                    "market_open": is_market_open(),
-                    "from_cache": True,
-                    "last_updated": disk.get("last_updated"),
-                    "status_label": "Using last market signals",
-                },
-                "generated_at": disk.get("last_updated"),
-            })
-
-    # ── Priority 4: universe-based fallback (last resort) ────────────────────
-    fallback = _fallback_from_universe()
-    return jsonify({
-        "signals": fallback,
-        "cache_status": {
-            "market_open": is_market_open(),
-            "from_cache": True,
-            "last_updated": None,
-            "status_label": "Using last market signals",
-        },
-        "generated_at": _utc_now().isoformat(),
+        "total":        len(signals),
     })
 
 
-@app.route("/health", methods=["GET"])
-def health():
-    disk_meta = get_cache_meta()
-    return jsonify({
-        "status": "ok",
-        "time": _utc_now().isoformat(),
-        "market_open": is_market_open(),
-        "cache": disk_meta,
-    })
+@app.route("/api/price/<symbol>")
+def api_price(symbol: str):
+    """Return latest price for a single symbol (for trade P&L updates)."""
+    price = provider.get_current_price(symbol.upper())
+    if price is None:
+        return jsonify({"error": "price unavailable"}), 404
+    return jsonify({"symbol": symbol.upper(), "price": price})
 
-import os
+
+@app.route("/api/refresh", methods=["POST"])
+def api_refresh():
+    """Force a fresh market scan."""
+    provider.clear_cache()
+    results = _do_scan()
+    return jsonify({"ok": True, "count": len(results)})
+
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    app.run(debug=False, host="0.0.0.0", port=5000)
