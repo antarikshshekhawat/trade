@@ -3,274 +3,390 @@ from __future__ import annotations
 import pandas as pd
 import pandas_ta as ta
 from concurrent.futures import ThreadPoolExecutor, wait
-from io import StringIO
 from typing import Dict, List, Optional, Tuple
-from urllib.request import urlopen
 
 from data import MarketDataProvider
+from cache_utils import is_market_open, load_signals_cache, save_signals_cache
 
-# ── PERSISTENCE HELPERS ──────────────────────────────────────────────────────
-from cache_utils import (
-    is_market_open,
-    load_signals_cache,
-    save_signals_cache,
-)
-
-NSE_ALL_STOCKS_CSV = "https://archives.nseindia.com/content/equities/EQUITY_L.csv"
+# ── CONFIG ───────────────────────────────────────────────────────────────────
 PRIORITY_SYMBOLS = [
-    "SHAKTIPUMP",
-    "NSDL",
-    "WAAREEENER",
-    "GMDS",
-    "FIRSTSOURCE",
+    "SHAKTIPUMP", "NSDL", "WAAREEENER", "GMDS", "FIRSTSOURCE",
 ]
 
-# ── CORE UTILITIES ───────────────────────────────────────────────────────────
+# Minimum requirements for a signal to be returned
+MIN_RR            = 2.0      # risk-reward ratio floor
+MIN_RSI           = 35
+MAX_RSI           = 78
+MIN_DATA_BARS     = 55       # need at least this many clean bars
+SL_ATR_MULT       = 1.5      # stop-loss = entry - SL_ATR_MULT * ATR
+TARGET_ATR_MULT   = 3.0      # target   = entry + TARGET_ATR_MULT * ATR
+MIN_PRICE         = 20.0     # filter out penny stocks
+MIN_AVG_VOLUME    = 50_000   # avoid illiquid names
+
+
+# ── INDICATOR ENGINE ─────────────────────────────────────────────────────────
 
 def _prepare_indicators(frame: pd.DataFrame) -> pd.DataFrame:
-    """Calculates technical indicators and cleans data."""
+    """Calculates all technical indicators on a clean copy of OHLCV data."""
     if frame.empty:
         return frame
-    
+
     df = frame.copy()
     for col in ["open", "high", "low", "close", "volume"]:
         df[col] = pd.to_numeric(df[col], errors="coerce")
+    df.dropna(subset=["open", "high", "low", "close", "volume"], inplace=True)
 
+    # ── Trend
+    df["ema9"]  = ta.ema(df["close"], length=9)
     df["ema20"] = ta.ema(df["close"], length=20)
     df["ema50"] = ta.ema(df["close"], length=50)
+
+    # ── Momentum
     df["rsi14"] = ta.rsi(df["close"], length=14)
-    df["atr14"] = ta.atr(df["high"], df["low"], df["close"], length=14)
-    df["vol_sma20"] = ta.sma(df["volume"], length=20)
-    
-    df["high20_prev"] = df["high"].rolling(window=20).max().shift(1)
 
     macd = ta.macd(df["close"], fast=12, slow=26, signal=9)
     if macd is not None and not macd.empty:
-        hist_col = [col for col in macd.columns if "MACDh" in col]
+        hist_col = [c for c in macd.columns if "MACDh" in c]
         df["macdh"] = macd[hist_col[0]] if hist_col else pd.NA
     else:
         df["macdh"] = pd.NA
-        
-    return df.dropna().copy()
 
+    # ── Volatility / Risk
+    df["atr14"] = ta.atr(df["high"], df["low"], df["close"], length=14)
+
+    # Bollinger Bands
+    bb = ta.bbands(df["close"], length=20, std=2.0)
+    if bb is not None and not bb.empty:
+        cols = bb.columns.tolist()
+        bb_u = [c for c in cols if "BBU" in c]
+        bb_l = [c for c in cols if "BBL" in c]
+        bb_m = [c for c in cols if "BBM" in c]
+        if bb_u: df["bb_upper"] = bb[bb_u[0]]
+        if bb_l: df["bb_lower"] = bb[bb_l[0]]
+        if bb_m: df["bb_mid"]   = bb[bb_m[0]]
+    else:
+        df["bb_upper"] = pd.NA
+        df["bb_lower"] = pd.NA
+        df["bb_mid"]   = pd.NA
+
+    # Supertrend (10,3)
+    st = ta.supertrend(df["high"], df["low"], df["close"], length=10, multiplier=3.0)
+    if st is not None and not st.empty:
+        st_dir = [c for c in st.columns if "SUPERTd" in c]
+        df["st_uptrend"] = st[st_dir[0]].map(lambda x: x == 1) if st_dir else False
+    else:
+        df["st_uptrend"] = False
+
+    # ── Volume
+    df["vol_sma20"]   = ta.sma(df["volume"], length=20)
+    df["high20_prev"] = df["high"].rolling(window=20).max().shift(1)
+    df["low10_prev"]  = df["low"].rolling(window=10).min().shift(1)
+
+    return df.dropna(subset=["ema20", "ema50", "rsi14", "atr14", "macdh"]).copy()
+
+
+# ── SCORING ──────────────────────────────────────────────────────────────────
 
 def _score_candidate(row: pd.Series) -> float:
-    """Improved scoring function with base score and technical weights."""
-    ema20 = float(row["ema20"])
-    ema50 = float(row["ema50"])
-    macdh = float(row["macdh"])
-    rsi14 = float(row["rsi14"])
-    
-    score = 50.0
+    """
+    Quality score 0-100.
+    Higher = stronger technical setup.
+    """
+    ema20  = float(row["ema20"])
+    ema50  = float(row["ema50"])
+    macdh  = float(row["macdh"])
+    rsi14  = float(row["rsi14"])
+    score  = 40.0
 
+    # Trend alignment
     if ema20 > ema50:
         score += 15
+    try:
+        if bool(row.get("st_uptrend", False)):
+            score += 10
+    except Exception:
+        pass
+
+    # Momentum
     if macdh > 0:
-        score += 15
+        score += 12
+    score += min(max(macdh * 40, 0), 8)   # MACD histogram strength bonus
+
+    # RSI sweet spot
     if 45 <= rsi14 <= 65:
         score += 10
+    elif 38 <= rsi14 <= 72:
+        score += 5
 
-    score += min(max(macdh * 50, 0), 10)
+    # Volume bonus (set by caller)
+    return round(min(score, 100.0), 2)
 
-    return round(score, 2)
 
+# ── SIGNAL BUILDER ───────────────────────────────────────────────────────────
 
-def _rr_format(entry: float, sl: float, target: float) -> Tuple[Optional[float], Optional[str]]:
-    """Calculates Risk/Reward ratio and formats as string."""
-    risk = abs(entry - sl)
+def _rr_format(entry: float, sl: float, target: float) -> Tuple[float, str]:
+    risk   = abs(entry - sl)
     reward = abs(target - entry)
-    if risk <= 0 or reward <= 0:
-        return 1.0, "1:1"
-    rr = reward / risk
-    return round(rr, 2), f"1:{round(rr, 2)}"
+    if risk <= 0:
+        return 0.0, "N/A"
+    rr = round(reward / risk, 2)
+    return rr, f"1:{rr}"
 
 
-def _build_signal(ticker: str, category: str, row: pd.Series, pattern: str) -> Dict:
-    """Constructs a signal dictionary from technical data."""
-    entry = float(row["close"])
-    atr = float(row["atr14"])
-    sl = round(entry - 1.5 * atr, 2)
-    target = round(entry + 3.0 * atr, 2)
+def _build_signal(
+    ticker: str,
+    category: str,
+    row: pd.Series,
+    pattern: str,
+    sl_mult: float = SL_ATR_MULT,
+    tgt_mult: float = TARGET_ATR_MULT,
+) -> Dict:
+    entry  = float(row["close"])
+    atr    = float(row["atr14"])
+    sl     = round(entry - sl_mult * atr, 2)
+    target = round(entry + tgt_mult * atr, 2)
     rr, rr_text = _rr_format(entry, sl, target)
-    sl_pct = round(((sl / entry) - 1) * 100, 2)
+    sl_pct     = round(((sl / entry) - 1) * 100, 2)
     target_pct = round(((target / entry) - 1) * 100, 2)
 
     return {
-        "ticker": ticker,
-        "category": category,
-        "pattern": pattern,
-        "entry": round(entry, 2),
-        "sl": sl,
-        "sl_pct": sl_pct,
-        "target": target,
-        "target_pct": target_pct,
-        "upside_pct": round(target_pct, 2),
-        "rr": rr,
-        "rr_text": rr_text,
-        "price": round(entry, 2),
-        "rsi": round(float(row["rsi14"]), 2),
-        "ema20": round(float(row["ema20"]), 2),
-        "ema50": round(float(row["ema50"]), 2),
-        "atr14": round(float(row["atr14"]), 2),
-        "macd_hist": round(float(row["macdh"]), 4),
+        "ticker":      ticker,
+        "category":    category,
+        "pattern":     pattern,
+        "entry":       round(entry, 2),
+        "price":       round(entry, 2),
+        "sl":          sl,
+        "sl_pct":      sl_pct,
+        "target":      target,
+        "target_pct":  target_pct,
+        "upside_pct":  round(target_pct, 2),
+        "rr":          rr,
+        "rr_text":     rr_text,
+        "rsi":         round(float(row["rsi14"]), 2),
+        "ema20":       round(float(row["ema20"]), 2),
+        "ema50":       round(float(row["ema50"]), 2),
+        "atr14":       round(float(row["atr14"]), 2),
+        "macd_hist":   round(float(row["macdh"]), 4),
+        "is_candidate": False,
+        "candidate_score": 0.0,
+        "mover_5d_pct": 0.0,
     }
 
 
 def _mover_score(df: pd.DataFrame) -> Optional[float]:
-    """Calculates 5-day price movement percentage."""
+    """5-session price change %."""
     if df.empty or len(df) < 8:
         return None
     close = df["close"].astype(float)
-    last = float(close.iloc[-1])
-    prev = float(close.iloc[-6])
+    last, prev = float(close.iloc[-1]), float(close.iloc[-6])
     return round((last / prev - 1) * 100, 3) if prev > 0 else None
 
-# ── SCANNING LOGIC ───────────────────────────────────────────────────────────
+
+# ── PER-SYMBOL SCAN ──────────────────────────────────────────────────────────
 
 def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Optional[Dict]:
-    """Analyzes symbol and returns signal or safe fallback for non-signals."""
+    """
+    Evaluate one symbol.  Returns a signal dict if a qualifying setup is found,
+    or None if no strong signal exists (weak setups are intentionally discarded).
+    """
     try:
-        frame = provider.get_ohlc(symbol=symbol, period="4mo", interval="1d")
-        if frame is None or frame.empty or len(frame) < 35:
+        frame = provider.get_ohlc(symbol=symbol, period="6mo", interval="1d")
+        if frame is None or frame.empty or len(frame) < MIN_DATA_BARS:
             return None
 
         df = _prepare_indicators(frame)
-        if df.empty or len(df) < 3:
+        if df.empty or len(df) < 5:
             return None
 
-        recent = df.iloc[-4:]
-        prev_row = df.iloc[-2]
-        last_row = df.iloc[-1]
+        last_row   = df.iloc[-1]
+        prev_row   = df.iloc[-2]
+        recent4    = df.iloc[-4:]
 
-        prev_macdh = float(prev_row["macdh"])
-        last_macdh = float(last_row["macdh"])
-        min_recent_macdh = float(recent["macdh"].astype(float).min())
-        
-        macd_cross_up = (prev_macdh < 0 and last_macdh > 0) or (
-            min_recent_macdh < 0 and last_macdh > 0
-        )
-        
-        last_rsi = float(last_row["rsi14"])
-        ema20 = float(last_row["ema20"])
-        ema50 = float(last_row["ema50"])
-        rsi_ok = 35 <= last_rsi <= 80
-        ema_trend_ok = ema20 > ema50
-
-        last_close = float(last_row["close"])
+        # ── Extract key values ────────────────────────────────────────────────
+        last_close  = float(last_row["close"])
+        last_rsi    = float(last_row["rsi14"])
+        ema20       = float(last_row["ema20"])
+        ema50       = float(last_row["ema50"])
+        last_macdh  = float(last_row["macdh"])
+        prev_macdh  = float(prev_row["macdh"])
         high20_prev = float(last_row["high20_prev"])
         last_volume = float(last_row["volume"])
-        vol_sma20 = float(last_row["vol_sma20"])
-        
-        # 1. Momentum Breakout
-        if last_close >= high20_prev and vol_sma20 > 0 and last_volume >= 2.0 * vol_sma20:
-            breakout = _build_signal(symbol, category, last_row, "Momentum Breakout")
-            breakout["candidate_score"] = float(_score_candidate(last_row)) + 20.0
-            breakout["is_candidate"] = True
-            breakout["mover_5d_pct"] = float(_mover_score(frame) or 0.0)
-            return breakout
+        vol_sma20   = float(last_row["vol_sma20"])
+        atr         = float(last_row["atr14"])
+        st_up       = bool(last_row.get("st_uptrend", False))
 
-        # 2. MACD Reversal
-        if macd_cross_up and rsi_ok and ema_trend_ok:
-            return _build_signal(symbol, category, last_row, "MACD Cross + RSI Zone + EMA Trend")
-
-        # 3. Trend Continuation Candidate
-        if ema_trend_ok and last_macdh > 0 and 38 <= last_rsi <= 72:
-            candidate = _build_signal(symbol, category, last_row, "Momentum Trend Candidate")
-            candidate["candidate_score"] = float(_score_candidate(last_row))
-            candidate["is_candidate"] = True
-            mover = _mover_score(frame)
-            if mover is not None:
-                candidate["mover_5d_pct"] = float(mover)
-            return candidate
-
-        # --- SAFE FALLBACK FOR ALL OTHER STOCKS ---
-        try:
-            current_close = float(last_row["close"])
-            current_score = float(_score_candidate(last_row))
-        except:
+        # ── Basic quality gates ───────────────────────────────────────────────
+        if last_close < MIN_PRICE:
+            return None
+        if vol_sma20 < MIN_AVG_VOLUME:
+            return None
+        if not (MIN_RSI <= last_rsi <= MAX_RSI):
+            return None
+        if atr <= 0:
             return None
 
-        return {
-            "ticker": symbol,
-            "category": category,
-            "pattern": "No Strong Signal",
-            "price": round(current_close, 2),
-            "entry": round(current_close, 2),
-            "target": round(current_close * 1.02, 2),
-            "sl": round(current_close * 0.98, 2),
-            "rr": 1.0,
-            "rr_text": "1:1",
-            "sl_pct": -2.0,
-            "target_pct": 2.0,
-            "candidate_score": current_score,
-            "is_candidate": False
-        }
-            
+        # Pre-compute derived flags
+        ema_uptrend   = ema20 > ema50
+        vol_ratio     = (last_volume / vol_sma20) if vol_sma20 > 0 else 0
+        min_rec_macdh = float(recent4["macdh"].astype(float).min())
+        macd_cross_up = (
+            (prev_macdh < 0 and last_macdh > 0) or
+            (min_rec_macdh < 0 and last_macdh > 0)
+        )
+
+        # ── SIGNAL 1: Momentum Breakout ───────────────────────────────────────
+        # Price breaks 20-day high with strong volume surge AND trend is up
+        if (
+            last_close >= high20_prev
+            and vol_ratio >= 2.0
+            and ema_uptrend
+            and last_macdh > 0
+        ):
+            sig = _build_signal(symbol, category, last_row, "Momentum Breakout")
+            sig["candidate_score"] = min(_score_candidate(last_row) + 20.0, 100.0)
+            sig["is_candidate"]    = True
+            sig["mover_5d_pct"]    = float(_mover_score(frame) or 0.0)
+            sig["vol_ratio"]       = round(vol_ratio, 2)
+            return sig
+
+        # ── SIGNAL 2: MACD Bullish Cross ─────────────────────────────────────
+        # MACD histogram crosses from negative to positive territory
+        # + confirmed by upward EMA structure + Supertrend bullish
+        if (
+            macd_cross_up
+            and ema_uptrend
+            and st_up
+            and 40 <= last_rsi <= 72
+        ):
+            sig = _build_signal(symbol, category, last_row, "MACD Cross + Supertrend")
+            sig["candidate_score"] = _score_candidate(last_row) + 10.0
+            sig["is_candidate"]    = True
+            sig["mover_5d_pct"]    = float(_mover_score(frame) or 0.0)
+            return sig
+
+        # ── SIGNAL 3: EMA Pullback in Uptrend ────────────────────────────────
+        # Price dips near EMA20 in a strong uptrend (EMA20 > EMA50 > price > EMA20 * 0.97)
+        # RSI not overbought, MACD positive = continuation buy
+        near_ema20 = (last_close >= ema20 * 0.97) and (last_close <= ema20 * 1.03)
+        if (
+            ema_uptrend
+            and near_ema20
+            and last_macdh > 0
+            and 38 <= last_rsi <= 60
+            and st_up
+        ):
+            sig = _build_signal(symbol, category, last_row, "EMA20 Pullback Buy")
+            sig["candidate_score"] = _score_candidate(last_row) + 5.0
+            sig["is_candidate"]    = True
+            sig["mover_5d_pct"]    = float(_mover_score(frame) or 0.0)
+            return sig
+
+        # ── SIGNAL 4: High-Quality Trend Continuation ─────────────────────────
+        # All four conditions must be green: EMA uptrend + Supertrend + MACD pos + RSI sweet spot
+        # Require at least 1.5x volume to confirm participation
+        if (
+            ema_uptrend
+            and st_up
+            and last_macdh > 0
+            and 45 <= last_rsi <= 68
+            and vol_ratio >= 1.5
+        ):
+            sig = _build_signal(symbol, category, last_row, "Trend Continuation")
+            sig["candidate_score"] = _score_candidate(last_row)
+            sig["is_candidate"]    = True
+            sig["mover_5d_pct"]    = float(_mover_score(frame) or 0.0)
+            sig["vol_ratio"]       = round(vol_ratio, 2)
+            return sig
+
+        # No qualifying signal — return nothing (no weak fallback)
+        return None
+
     except Exception:
         return None
 
 
+# ── MARKET SCAN ORCHESTRATOR ─────────────────────────────────────────────────
+
 def scan_market(
     provider: MarketDataProvider,
     categorized_stocks: Dict[str, List[str]],
-    max_workers: int = 5,
-    max_signals: int = 30,
-    scan_timeout_sec: int = 25,
+    max_workers: int  = 8,
+    max_signals: int  = 60,
+    scan_timeout_sec: int = 40,
 ) -> List[Dict]:
-    """Orchestrates market-wide scanning returning all stocks ranked by score."""
-    
+    """
+    Scan all provided symbols in parallel.
+    Returns up to `max_signals` results sorted by score (best first).
+    Serves from cache when the market is closed and cache is fresh.
+    """
+
+    # ── Cache path (market closed) ────────────────────────────────────────────
     if not is_market_open():
         cached = load_signals_cache()
         if cached and cached.get("signals"):
             for sig in cached["signals"]:
-                sig["_from_cache"] = True
-                sig["_cache_last_updated"] = cached.get("last_updated", "")
+                sig["_from_cache"]          = True
+                sig["_cache_last_updated"]  = cached.get("last_updated", "")
             return cached["signals"]
 
-    symbol_tasks = {}
+    # ── Build symbol→category map ─────────────────────────────────────────────
+    symbol_tasks: Dict[str, str] = {}
     for category, stocks in categorized_stocks.items():
         for s in stocks:
-            clean_s = str(s).strip().upper().replace(".NS", "")
-            if clean_s: symbol_tasks[clean_s] = category
+            clean = str(s).strip().upper().replace(".NS", "")
+            if clean:
+                symbol_tasks[clean] = category
 
     for s in PRIORITY_SYMBOLS:
-        clean_s = str(s).strip().upper().replace(".NS", "")
-        if clean_s not in symbol_tasks:
-            symbol_tasks[clean_s] = "smallcap"
+        clean = str(s).strip().upper().replace(".NS", "")
+        if clean not in symbol_tasks:
+            symbol_tasks[clean] = "smallcap"
 
     if not symbol_tasks:
         return []
 
-    ipo_set = set(str(s).strip().upper().replace(".NS", "") for s in categorized_stocks.get("ipo", []))
-    signals = []
+    ipo_set = {
+        str(s).strip().upper().replace(".NS", "")
+        for s in categorized_stocks.get("ipo", [])
+    }
 
+    # ── Parallel scan ─────────────────────────────────────────────────────────
+    signals: List[Dict] = []
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        future_to_symbol = {
-            executor.submit(scan_symbol, provider, s, cat): s 
-            for s, cat in symbol_tasks.items()
+        future_map = {
+            executor.submit(scan_symbol, provider, sym, cat): sym
+            for sym, cat in symbol_tasks.items()
         }
-        done, pending = wait(future_to_symbol.keys(), timeout=scan_timeout_sec)
-        for f in pending: f.cancel()
+        done, pending = wait(future_map.keys(), timeout=scan_timeout_sec)
+        for f in pending:
+            f.cancel()
         for f in done:
             try:
-                res = f.result()
-                if res: signals.append(res)
-            except: continue
+                result = f.result()
+                if result:
+                    # ── Post-filter: enforce minimum RR ───────────────────────
+                    if float(result.get("rr", 0)) >= MIN_RR:
+                        signals.append(result)
+            except Exception:
+                continue
 
-    # Rank: Candidates first, then by descending score
+    # ── Rank by candidate flag then score ────────────────────────────────────
     signals.sort(
-        key=lambda x: (int(x.get("is_candidate", False)), float(x.get("candidate_score", 0))),
+        key=lambda x: (
+            int(x.get("is_candidate", False)),
+            float(x.get("candidate_score", 0)),
+        ),
         reverse=True,
     )
 
+    # ── Patch IPO category ────────────────────────────────────────────────────
     for item in signals:
         if item["ticker"] in ipo_set:
             item["category"] = "ipo"
 
-    top_signals = signals[:100]
+    top = signals[:max_signals]
 
-    if top_signals:
-        save_signals_cache(top_signals)
-        return top_signals
+    if top:
+        save_signals_cache(top)
 
-    return []
+    return top
