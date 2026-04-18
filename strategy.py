@@ -133,6 +133,41 @@ def _mover_score(df: pd.DataFrame) -> Optional[float]:
     prev = float(close.iloc[-6])
     return round((last / prev - 1) * 100, 3) if prev > 0 else None
 
+
+def _attach_strategy_fields(signal: Dict, score: float, rsi: float, ema20: float, ema50: float) -> None:
+    """
+    Enrich signal with duration, long-term classification, and instruction fields.
+    """
+    pattern = str(signal.get("pattern") or "").lower()
+    if "breakout" in pattern or "macd cross" in pattern:
+        duration = "Short-term"
+    else:
+        duration = "Mid-term"
+
+    rr = float(signal.get("rr") or 0.0)
+    risk_pct = abs(float(signal.get("sl_pct") or 0.0))
+    low_risk_high_reward = risk_pct <= 3.0 and rr >= 2.0
+    high_risk_high_reward = risk_pct > 3.0 and rr >= 2.0
+
+    # Long-term growth proxy (technical strength filter)
+    long_term_candidate = bool(
+        score >= 72.0
+        and ema20 > ema50
+        and 42.0 <= rsi <= 72.0
+        and float(signal.get("target_pct") or 0.0) >= TARGET_MIN_PCT
+    )
+
+    signal["duration"] = duration
+    signal["risk_bucket_low_high"] = low_risk_high_reward
+    signal["risk_bucket_high_high"] = high_risk_high_reward
+    signal["long_term_candidate"] = long_term_candidate
+    signal["long_term_return_band"] = "2x-3x in ~24 months" if long_term_candidate else "Not in long-term basket"
+    signal["long_term_strategy"] = (
+        "Accumulate on 8-12% dips; stagger entries and review trend monthly."
+        if long_term_candidate
+        else "Treat as swing setup; do not allocate core long-term capital."
+    )
+
 # ── SCANNING LOGIC ───────────────────────────────────────────────────────────
 
 def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Optional[Dict]:
@@ -176,29 +211,35 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
         # 1. Momentum Breakout
         if last_close >= high20_prev and vol_sma20 > 0 and last_volume >= 2.0 * vol_sma20:
             breakout = _build_signal(symbol, category, last_row, "Momentum Breakout")
-            breakout["candidate_score"] = float(_score_candidate(last_row)) + 20.0
+            score = float(_score_candidate(last_row)) + 20.0
+            breakout["candidate_score"] = score
             breakout["is_candidate"] = True
             breakout["mover_5d_pct"] = float(_mover_score(frame) or 0.0)
             breakout["last_close"] = round(prev_close, 2)
+            _attach_strategy_fields(breakout, score, last_rsi, ema20, ema50)
             return breakout
 
         # 2. MACD Reversal
         if macd_cross_up and rsi_ok and ema_trend_ok:
             sig = _build_signal(symbol, category, last_row, "MACD Cross + RSI Zone + EMA Trend")
             sig["is_candidate"] = True 
-            sig["candidate_score"] = float(_score_candidate(last_row)) + 10.0
+            score = float(_score_candidate(last_row)) + 10.0
+            sig["candidate_score"] = score
             sig["last_close"] = round(prev_close, 2)
+            _attach_strategy_fields(sig, score, last_rsi, ema20, ema50)
             return sig
 
         # 3. Trend Continuation Candidate
         if ema_trend_ok and last_macdh > 0 and 38 <= last_rsi <= 72:
             candidate = _build_signal(symbol, category, last_row, "Momentum Trend Candidate")
-            candidate["candidate_score"] = float(_score_candidate(last_row))
+            score = float(_score_candidate(last_row))
+            candidate["candidate_score"] = score
             candidate["is_candidate"] = True
             mover = _mover_score(frame)
             if mover is not None:
                 candidate["mover_5d_pct"] = float(mover)
             candidate["last_close"] = round(prev_close, 2)
+            _attach_strategy_fields(candidate, score, last_rsi, ema20, ema50)
             return candidate
 
         # --- SAFE FALLBACK FOR ALL OTHER STOCKS ---
@@ -208,7 +249,7 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
         except:
             return None
 
-        return {
+        fallback = {
             "ticker": symbol,
             "category": category,
             "pattern": "No Strong Signal",
@@ -224,6 +265,8 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
             "candidate_score": current_score,
             "is_candidate": False
         }
+        _attach_strategy_fields(fallback, current_score, last_rsi, ema20, ema50)
+        return fallback
             
     except Exception:
         return None
