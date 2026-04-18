@@ -174,6 +174,30 @@ class BrokerRealtimeProvider(MarketDataProvider):
     def get_ohlc(self, symbol: str, period="8mo", interval="1d") -> pd.DataFrame:
         raise NotImplementedError("Add broker API here later")
 
+
+def fetch_last_prices_nse(symbols: List[str]) -> Dict[str, float]:
+    """Latest daily close for NSE symbols (for My Trades LTP). Caps at 25 symbols."""
+    out: Dict[str, float] = {}
+    seen = set()
+    for raw in symbols[:25]:
+        clean = _clean_symbol(str(raw))
+        if not clean or clean in seen:
+            continue
+        seen.add(clean)
+        ticker = _to_nse_ticker(clean)
+        if not ticker:
+            continue
+        try:
+            t = yf.Ticker(ticker)
+            hist = t.history(period="5d", interval="1d")
+            if hist is not None and not hist.empty and "Close" in hist.columns:
+                last = float(hist["Close"].iloc[-1])
+                out[clean] = round(last, 2)
+        except Exception:
+            continue
+    return out
+
+
 # ─────────────────────────────────────────────────────────────
 # DEFAULT PROVIDER
 # ─────────────────────────────────────────────────────────────
