@@ -42,7 +42,25 @@ def home():
 
 def scan():
 
-    signals = scan_market()
+    universe = _get_universe_cached()
+
+    provider = get_default_provider()
+
+    signals = scan_market(
+
+        provider=provider,
+
+        categorized_stocks=universe,
+
+        max_workers=10,
+
+        max_signals=30,
+
+        scan_timeout_sec=120,
+
+        max_symbols_to_scan=120,
+
+    )
 
     return jsonify(signals)
 
@@ -146,11 +164,13 @@ def _refresh_signals() -> None:
 
             categorized_stocks=universe,
 
-            max_workers=20,
+            max_workers=10,
 
             max_signals=30,
 
-            scan_timeout_sec=22,
+            scan_timeout_sec=120,
+
+            max_symbols_to_scan=120,
 
         )
 
@@ -498,9 +518,7 @@ def stocks():
 
 # ─────────────────────────────────────────────────────────────────────────────
 
-@app.route("/signals", methods=["GET"])
-
-def signals():
+def _signals_handler():
 
     payload = _get_signals_cached()
 
@@ -611,7 +629,17 @@ def signals():
     })
 
 
+@app.route("/signals", methods=["GET"])
+@app.route("/api/signals", methods=["GET"])
+def signals():
+    return _signals_handler()
 
+
+@app.route("/api/refresh", methods=["POST"])
+def api_refresh():
+    worker = Thread(target=_refresh_signals, daemon=True)
+    worker.start()
+    return jsonify({"ok": True})
 
 
 @app.route("/health", methods=["GET"])
