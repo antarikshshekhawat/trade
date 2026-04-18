@@ -1,137 +1,189 @@
 from __future__ import annotations
 
-import logging
-from typing import Dict, Optional
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from io import StringIO
+from typing import Dict, List
+from urllib.request import urlopen
+import time
+
 import pandas as pd
-
-logger = logging.getLogger(__name__)
-
-EXCHANGE_SUFFIX = ".NS"
-_REQUIRED_COLS = ["open", "high", "low", "close", "volume"]
+import yfinance as yf
 
 
-class MarketDataProvider:
-    """
-    Fetches OHLCV data from Yahoo Finance for NSE-listed stocks.
+# ─────────────────────────────────────────────────────────────
+# INDEX DATA SOURCES
+# ─────────────────────────────────────────────────────────────
 
-    Symbols are accepted without the .NS suffix; it is appended automatically.
-    An in-process LRU-style cache reduces redundant network calls when the same
-    symbol is requested by multiple scan workers.
-    """
+INDEX_URLS = {
+    "largecap": "https://niftyindices.com/IndexConstituent/ind_nifty50list.csv",
+    "midcap": "https://niftyindices.com/IndexConstituent/ind_niftymidcap100list.csv",
+    "smallcap": "https://niftyindices.com/IndexConstituent/ind_niftysmallcap100list.csv",
+}
 
-    def __init__(self, cache_size: int = 300) -> None:
-        self._cache: Dict[str, pd.DataFrame] = {}
-        self._cache_size = cache_size
 
-    # ── INTERNAL HELPERS ─────────────────────────────────────────────────────
+FALLBACK_UNIVERSE = {
+    "largecap": [
+        "RELIANCE","TCS","INFY","HDFCBANK","ICICIBANK","LT","SBIN",
+        "ITC","AXISBANK","BAJFINANCE","ASIANPAINT","KOTAKBANK",
+        "MARUTI","HCLTECH","WIPRO","ULTRACEMCO","SUNPHARMA",
+        "TITAN","NTPC","POWERGRID"
+    ],
+    "midcap": [
+        "POLYCAB","PERSISTENT","COFORGE","MPHASIS","BHEL",
+        "NHPC","IDFCFIRSTB","LUPIN","INDHOTEL","SUPREMEIND"
+    ],
+    "smallcap": [
+        "IRB","JUBLINGREA","FSL","KNRCON","RKFORGE",
+        "RAIN","TRITURBINE","FCL","WELCORP","KPIGREEN"
+    ],
+}
 
-    def _to_ticker(self, symbol: str) -> str:
-        s = str(symbol).strip().upper()
-        # Strip existing suffixes to normalise
-        for suffix in (".NS", ".BO", ".BSE"):
-            s = s.replace(suffix, "")
-        return s + EXCHANGE_SUFFIX
 
-    def _evict_if_full(self) -> None:
-        if len(self._cache) >= self._cache_size:
-            self._cache.pop(next(iter(self._cache)), None)
+FALLBACK_IPO_STOCKS = [
+    "TATATECH","AWL","MEDANTA","MANKIND",
+    "IREDA","DOMS","ZOMATO","NYKAA","PAYTM","LATENTVIEW"
+]
 
-    def _flatten_columns(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Collapse MultiIndex columns produced by yfinance ≥0.2."""
-        if isinstance(df.columns, pd.MultiIndex):
-            df.columns = df.columns.get_level_values(0)
-        return df
 
-    def _rename_and_select(self, df: pd.DataFrame) -> Optional[pd.DataFrame]:
-        """Lower-case columns, rename adj_close, select required cols."""
-        df.columns = [str(c).lower().strip().replace(" ", "_") for c in df.columns]
-        if "adj_close" in df.columns and "close" not in df.columns:
-            df = df.rename(columns={"adj_close": "close"})
-        missing = [c for c in _REQUIRED_COLS if c not in df.columns]
-        if missing:
-            logger.debug("Missing columns %s", missing)
-            return None
-        return df[_REQUIRED_COLS].copy()
+# ─────────────────────────────────────────────────────────────
+# HELPERS
+# ─────────────────────────────────────────────────────────────
 
-    # ── PUBLIC API ────────────────────────────────────────────────────────────
+def _clean_symbol(symbol: str) -> str:
+    return str(symbol).strip().upper().replace(".NS", "")
 
-    def get_ohlc(
-        self,
-        symbol: str,
-        period: str = "4mo",
-        interval: str = "1d",
-    ) -> Optional[pd.DataFrame]:
-        """
-        Return a DataFrame with columns [open, high, low, close, volume]
-        indexed by date, sorted ascending.  Returns None on any failure.
-        """
-        try:
-            import yfinance as yf
-        except ImportError:
-            logger.error("yfinance is not installed. Run: pip install yfinance")
-            return None
 
-        ticker = self._to_ticker(symbol)
-        cache_key = f"{ticker}|{period}|{interval}"
+def _to_nse_ticker(symbol: str) -> str:
+    s = _clean_symbol(symbol)
+    return f"{s}.NS" if s else ""
 
-        if cache_key in self._cache:
-            return self._cache[cache_key].copy()
 
-        try:
-            raw: pd.DataFrame = yf.download(
-                ticker,
-                period=period,
-                interval=interval,
-                progress=False,
-                auto_adjust=True,
-                threads=False,
-            )
-        except Exception as exc:
-            logger.debug("Download failed for %s: %s", ticker, exc)
-            return None
+# ─────────────────────────────────────────────────────────────
+# LOAD SYMBOLS FROM NSE
+# ─────────────────────────────────────────────────────────────
 
-        if raw is None or raw.empty:
-            return None
+def _load_index_symbols(url: str) -> List[str]:
+    try:
+        with urlopen(url, timeout=5) as response:
+            raw_csv = response.read().decode("utf-8", errors="ignore")
 
-        raw = self._flatten_columns(raw)
-        df = self._rename_and_select(raw)
-        if df is None:
-            return None
+        df = pd.read_csv(StringIO(raw_csv))
 
-        # Drop rows where close price is missing / zero
-        df = df[df["close"].notna() & (df["close"] > 0)]
-        if len(df) < 10:
-            return None
+        for col in ["Symbol", "SYMBOL", "Ticker", "ticker"]:
+            if col in df.columns:
+                symbols = [_clean_symbol(x) for x in df[col].dropna()]
+                return sorted(list(set(filter(None, symbols))))
+    except Exception as e:
+        print(f"[DATA ERROR] Failed to load index from {url}: {e}")
 
-        df.index = pd.to_datetime(df.index)
-        df = df.sort_index()
+    return []
 
-        self._evict_if_full()
-        self._cache[cache_key] = df.copy()
-        return df
 
-    def get_current_price(self, symbol: str) -> Optional[float]:
-        """
-        Return the latest available closing price for a symbol.
-        Tries fast_info first, falls back to a 5-day OHLC fetch.
-        """
-        try:
-            import yfinance as yf
-            ticker = self._to_ticker(symbol)
-            t = yf.Ticker(ticker)
-            fi = t.fast_info
-            for attr in ("last_price", "regular_market_price"):
-                val = getattr(fi, attr, None)
-                if val and val > 0:
-                    return round(float(val), 2)
-        except Exception:
-            pass
+# ─────────────────────────────────────────────────────────────
+# BUILD STOCK UNIVERSE
+# ─────────────────────────────────────────────────────────────
 
-        # Fallback
-        df = self.get_ohlc(symbol, period="5d", interval="1d")
-        if df is not None and not df.empty:
-            return round(float(df["close"].iloc[-1]), 2)
-        return None
+def build_stock_universe() -> Dict[str, List[str]]:
+    universe = {}
 
-    def clear_cache(self) -> None:
-        self._cache.clear()
+    for category, url in INDEX_URLS.items():
+        live = _load_index_symbols(url)
+
+        if live:
+            universe[category] = live
+        else:
+            print(f"[WARNING] Using fallback for {category}")
+            universe[category] = FALLBACK_UNIVERSE[category]
+
+    universe["ipo"] = FALLBACK_IPO_STOCKS
+    return universe
+
+
+@dataclass
+class StockRecord:
+    symbol: str
+    category: str
+
+
+def flatten_universe(universe: Dict[str, List[str]]) -> List[StockRecord]:
+    records = []
+    for category, symbols in universe.items():
+        for symbol in symbols:
+            s = _clean_symbol(symbol)
+            if s:
+                records.append(StockRecord(s, category))
+    return records
+
+
+# ─────────────────────────────────────────────────────────────
+# DATA PROVIDERS
+# ─────────────────────────────────────────────────────────────
+
+class MarketDataProvider(ABC):
+    @abstractmethod
+    def get_ohlc(self, symbol: str, period="8mo", interval="1d") -> pd.DataFrame:
+        pass
+
+
+class YFinanceDataProvider(MarketDataProvider):
+
+    def _download(self, ticker: str, period: str, interval: str) -> pd.DataFrame:
+        return yf.download(
+            ticker,
+            period=period,
+            interval=interval,
+            progress=False,
+            threads=False,
+        )
+
+    def get_ohlc(self, symbol: str, period="8mo", interval="1d") -> pd.DataFrame:
+        ticker = _to_nse_ticker(symbol)
+
+        if not ticker:
+            return pd.DataFrame()
+
+        # 🔁 Retry mechanism
+        for attempt in range(3):
+            try:
+                df = self._download(ticker, period, interval)
+
+                if df.empty:
+                    continue
+
+                # ✅ Fix multi-index columns
+                if isinstance(df.columns, pd.MultiIndex):
+                    df.columns = [c[0].lower() for c in df.columns]
+                else:
+                    df.columns = [c.lower() for c in df.columns]
+
+                required = ["open", "high", "low", "close", "volume"]
+
+                if not all(col in df.columns for col in required):
+                    return pd.DataFrame()
+
+                df = df[required].dropna()
+
+                if df.empty:
+                    return pd.DataFrame()
+
+                return df
+
+            except Exception as e:
+                print(f"[YFINANCE ERROR] {ticker} attempt {attempt+1}: {e}")
+                time.sleep(1)
+
+        return pd.DataFrame()
+
+
+class BrokerRealtimeProvider(MarketDataProvider):
+    def get_ohlc(self, symbol: str, period="8mo", interval="1d") -> pd.DataFrame:
+        raise NotImplementedError("Add broker API here later")
+
+
+# ─────────────────────────────────────────────────────────────
+# DEFAULT PROVIDER
+# ─────────────────────────────────────────────────────────────
+
+def get_default_provider() -> MarketDataProvider:
+    return YFinanceDataProvider()
