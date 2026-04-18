@@ -740,17 +740,26 @@ async function loadAndRender() {
 
   allSignals = data.signals || [];
   const c = data.counts || {};
-  
-  const updateCounts = (idList, val) => idList.forEach(id => { if(document.getElementById(id)) document.getElementById(id).textContent = val; });
-  
-  updateCounts(['nav-count-all', 'top-val-all'], c.all ?? allSignals.length);
-  updateCounts(['nav-count-large', 'top-val-large'], c.largecap ?? 0);
-  updateCounts(['nav-count-mid', 'top-val-mid'], c.midcap ?? 0);
-  updateCounts(['nav-count-small', 'top-val-small'], c.smallcap ?? 0);
-  updateCounts(['nav-count-ipo', 'top-val-ipo'], c.ipo ?? 0);
+  const derived = { all: allSignals.length, largecap: 0, midcap: 0, smallcap: 0, ipo: 0 };
+  allSignals.forEach(s => {
+    const cat = (s.category || '').toLowerCase();
+    if (cat in derived) derived[cat]++;
+  });
+  const counts = { ...derived, ...c };
 
-  document.getElementById('cache-badge').style.display = data.from_cache ? 'block' : 'none';
-  document.getElementById('last-updated-text').textContent = data.last_updated ? `Last updated: ${data.last_updated}` : '';
+  const updateCounts = (idList, val) => idList.forEach(id => { if(document.getElementById(id)) document.getElementById(id).textContent = val; });
+
+  updateCounts(['nav-count-all', 'top-val-all'], counts.all ?? allSignals.length);
+  updateCounts(['nav-count-large', 'top-val-large'], counts.largecap ?? 0);
+  updateCounts(['nav-count-mid', 'top-val-mid'], counts.midcap ?? 0);
+  updateCounts(['nav-count-small', 'top-val-small'], counts.smallcap ?? 0);
+  updateCounts(['nav-count-ipo', 'top-val-ipo'], counts.ipo ?? 0);
+
+  const cs = data.cache_status || {};
+  const fromCache = cs.from_cache ?? data.from_cache;
+  const lastUpd = cs.last_updated ?? data.last_updated;
+  document.getElementById('cache-badge').style.display = fromCache ? 'block' : 'none';
+  document.getElementById('last-updated-text').textContent = lastUpd ? `Last updated: ${lastUpd}` : '';
 
   renderGrid();
 }
