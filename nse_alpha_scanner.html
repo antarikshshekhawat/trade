@@ -827,7 +827,6 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 </head>
 <body>
 
-<!-- ══════════════ TOP BAR ══════════════ -->
 <div id="topbar">
   <div class="logo">
     <div class="logo-mark">α</div>
@@ -880,10 +879,8 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
   </div>
 </div>
 
-<!-- ══════════════ LAYOUT ══════════════ -->
 <div id="layout">
 
-  <!-- SIDEBAR -->
   <div id="sidebar">
     <div>
       <div class="sidebar-section-title">Category</div>
@@ -946,7 +943,6 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
     </div>
   </div>
 
-  <!-- MAIN -->
   <div id="main">
     <div id="content-header">
       <div class="signal-count"><span id="shown-count">—</span> <span>signals</span></div>
@@ -963,7 +959,6 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
   </div>
 </div>
 
-<!-- ══════════════ TRADES PANEL ══════════════ -->
 <div id="trades-panel">
   <div class="trades-panel-header">
     <div class="trades-panel-title">My Trades</div>
@@ -976,7 +971,6 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
   </div>
 </div>
 
-<!-- ══════════════ TRADE MODAL ══════════════ -->
 <div id="modal-overlay">
   <div id="modal">
     <div class="modal-header">
@@ -1029,10 +1023,8 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
   </div>
 </div>
 
-<!-- ══════════════ TOAST ══════════════ -->
 <div id="toast"></div>
 
-<!-- ══════════════ JAVASCRIPT ══════════════ -->
 <script>
 /* ════════════════════════════════════════════════════════
    STATE
@@ -1043,7 +1035,6 @@ let currentSort  = 'score';
 let currentView  = 'all';    // all | watchlist | trades
 let searchQuery  = '';
 
-// localStorage keys
 const LS_WATCHLIST = 'nse_watchlist_v2';
 const LS_TRADES    = 'nse_trades_v2';
 
@@ -1080,9 +1071,13 @@ function showToast(msg, type = 'info') {
    API CALLS
 ════════════════════════════════════════════════════════ */
 async function fetchSignals() {
-  const res  = await fetch('/api/signals');
-  const data = await res.json();
-  return data;
+  try {
+    const res = await fetch('/api/signals');
+    if (!res.ok) throw new Error("Server Error");
+    return await res.json();
+  } catch (e) {
+    return null;
+  }
 }
 
 async function fetchPrice(symbol) {
@@ -1111,10 +1106,18 @@ async function triggerRefresh() {
    MAIN DATA LOAD
 ════════════════════════════════════════════════════════ */
 async function loadAndRender() {
+  const grid = document.getElementById('cards-grid');
+  grid.innerHTML = `<div id="loading-state"><div class="spinner"></div>Scanning market…</div>`;
+
   const data = await fetchSignals();
+  
+  if (!data || !data.signals) {
+    grid.innerHTML = `<div id="empty-state"><div style="font-size:32px">⚠️</div><div>Scan failed or timed out. Please try clicking Refresh.</div></div>`;
+    return;
+  }
+
   allSignals = data.signals || [];
 
-  // Update header counts
   const c = data.counts || {};
   document.getElementById('tb-all').textContent   = c.all      ?? allSignals.length;
   document.getElementById('tb-large').textContent = c.largecap ?? 0;
@@ -1128,11 +1131,9 @@ async function loadAndRender() {
   document.getElementById('cat-small-count').textContent = c.smallcap ?? 0;
   document.getElementById('cat-ipo-count').textContent   = c.ipo      ?? 0;
 
-  // Cache badge
   const cb = document.getElementById('cache-badge');
   cb.classList.toggle('show', !!data.from_cache);
 
-  // Last updated
   const lu = document.getElementById('last-updated-text');
   lu.textContent = data.last_updated ? `Last updated: ${data.last_updated}` : '';
 
@@ -1147,20 +1148,15 @@ function getVisibleSignals() {
   const watchlist = getWatchlist();
   let signals = [...allSignals];
 
-  // inject live trade status
   signals.forEach(s => {
     const t = trades[s.ticker];
-    if (t) {
-      s._trade = t;
-    }
+    if (t) s._trade = t;
   });
 
-  // view filter
   if (currentView === 'watchlist') {
     signals = signals.filter(s => watchlist.has(s.ticker));
   } else if (currentView === 'trades') {
     signals = signals.filter(s => trades[s.ticker]);
-    // Also include trade tickers not in current scan
     const tradeOnly = Object.keys(trades).filter(t => !signals.find(s => s.ticker === t));
     tradeOnly.forEach(t => {
       const tr = trades[t];
@@ -1174,12 +1170,10 @@ function getVisibleSignals() {
     });
   }
 
-  // category filter
   if (currentCat !== 'all') {
     signals = signals.filter(s => (s.category || '').toLowerCase() === currentCat);
   }
 
-  // search
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
     signals = signals.filter(s =>
@@ -1188,12 +1182,11 @@ function getVisibleSignals() {
     );
   }
 
-  // sort
   signals.sort((a, b) => {
     if (currentSort === 'rr')     return (b.rr || 0) - (a.rr || 0);
     if (currentSort === 'target') return (b.target_pct || 0) - (a.target_pct || 0);
     if (currentSort === 'ticker') return a.ticker.localeCompare(b.ticker);
-    // score (default): candidates first, then score desc
+    
     const aCand = a.is_candidate ? 1 : 0;
     const bCand = b.is_candidate ? 1 : 0;
     if (bCand !== aCand) return bCand - aCand;
@@ -1277,7 +1270,6 @@ function buildCard(sig, trade, inWatch) {
   const targetPct = sig.target_pct || 0;
   const slPct     = sig.sl_pct || 0;
 
-  // Status badge
   let statusHTML = '';
   if (isTaken) {
     const statusMap = { active:'TRADE', won:'TARGET HIT ✓', lost:'SL HIT ✗' };
@@ -1287,18 +1279,15 @@ function buildCard(sig, trade, inWatch) {
     statusHTML = `<span class="status-badge active">ACTIVE</span>`;
   }
 
-  // Trade button
   const tradeBtnHTML = isTaken
     ? `<button class="btn-trade taken" data-ticker="${sig.ticker}">📊 Trade</button>`
     : `<button class="btn-trade" data-ticker="${sig.ticker}">+ Trade</button>`;
 
-  // Price change (mover_5d_pct)
   const mover = sig.mover_5d_pct || 0;
   const moverHTML = mover !== 0
     ? `<span class="price-change ${mover >= 0 ? 'up' : 'down'}">${mover >= 0 ? '+' : ''}${mover.toFixed(2)}% 5d</span>`
     : '';
 
-  // Live P&L for taken trades (show from stored data)
   let livePnLHTML = '';
   if (isTaken && trade.lastPrice) {
     const lp    = trade.lastPrice;
@@ -1312,7 +1301,6 @@ function buildCard(sig, trade, inWatch) {
       </div>`;
   }
 
-  // RR progress bar
   const range  = target - sl;
   const slW    = range > 0 ? ((entry - sl) / range * 100).toFixed(1) : 0;
   const tgtW   = range > 0 ? ((target - entry) / range * 100).toFixed(1) : 0;
@@ -1324,12 +1312,10 @@ function buildCard(sig, trade, inWatch) {
     liveMarker = `<div class="bar-live-marker" style="left:${livePos}%"></div>`;
   }
 
-  // Indicators chips
   const rsi    = sig.rsi || 0;
   const macdh  = sig.macd_hist || 0;
   const volR   = sig.vol_ratio;
-  const stUp   = sig.st_uptrend;
-
+  
   const emaOk   = (sig.ema20 || 0) > (sig.ema50 || 0);
   const macdOk  = macdh > 0;
 
@@ -1409,13 +1395,11 @@ function buildCard(sig, trade, inWatch) {
     </div>
   `;
 
-  // Watchlist button
   div.querySelector('.btn-watchlist').addEventListener('click', e => {
     e.stopPropagation();
     toggleWatchlist(sig.ticker);
   });
 
-  // Trade button
   div.querySelector('.btn-trade').addEventListener('click', e => {
     e.stopPropagation();
     openTradeModal(sig);
@@ -1447,18 +1431,15 @@ function updateTradeCountBadges() {
   const tradeCount = Object.keys(trades).length;
   const watchCount = watchlist.size;
 
-  // Trades panel button
   const btnTrades = document.getElementById('btn-trades-count');
   if (btnTrades) btnTrades.textContent = tradeCount > 0 ? `Trades (${tradeCount})` : 'Trades';
 
-  // Sidebar watchlist badge
   const wb = document.getElementById('trade-count-badge');
   if (wb) {
     wb.style.display = watchCount > 0 ? 'inline-block' : 'none';
     wb.textContent = watchCount;
   }
 
-  // Sidebar trades badge
   const stb = document.getElementById('sidebar-trades-count');
   if (stb) {
     stb.style.display = tradeCount > 0 ? 'inline-block' : 'none';
@@ -1478,14 +1459,12 @@ function openTradeModal(sig) {
   const overlay = document.getElementById('modal-overlay');
   document.getElementById('modal-ticker').textContent = sig.ticker;
 
-  // Meta badges
   const cat = (sig.category || 'largecap').toLowerCase();
   document.getElementById('modal-meta').innerHTML = `
     <span class="cat-badge ${cat}">${catLabel(cat)}</span>
     <span class="ind-chip ${patternClass(sig.pattern || '')} good" style="font-size:10px">${sig.pattern || '—'}</span>
   `;
 
-  // Metrics
   document.getElementById('m-entry').textContent  = `₹${(sig.entry || sig.price || 0).toFixed(2)}`;
   document.getElementById('m-target').textContent = `₹${(sig.target || 0).toFixed(2)} (+${(sig.target_pct||0).toFixed(2)}%)`;
   document.getElementById('m-sl').textContent     = `₹${(sig.sl || 0).toFixed(2)} (${(sig.sl_pct||0).toFixed(2)}%)`;
@@ -1494,7 +1473,6 @@ function openTradeModal(sig) {
   document.getElementById('m-sl-label').textContent     = `SL ₹${(sig.sl||0).toFixed(0)}`;
   document.getElementById('m-target-label').textContent = `₹${(sig.target||0).toFixed(0)}`;
 
-  // Actions
   const actionsEl = document.getElementById('modal-actions');
   if (existing) {
     actionsEl.innerHTML = `
@@ -1516,7 +1494,6 @@ function openTradeModal(sig) {
 
   overlay.classList.add('open');
 
-  // Live price polling
   clearInterval(modalPriceInterval);
   updateModalPrice(sig);
   modalPriceInterval = setInterval(() => updateModalPrice(sig), 15000);
@@ -1537,18 +1514,15 @@ async function updateModalPrice(sig) {
   pnlEl.textContent = `${isPos ? '+' : ''}${pnl.toFixed(2)}%`;
   pnlEl.className = `modal-live-pnl ${isPos ? 'profit' : 'loss'}`;
 
-  // Progress bar (0% = SL, 100% = Target)
   const range   = target - sl;
   const pos     = range > 0 ? Math.min(Math.max(((price - sl) / range) * 100, 0), 100) : 50;
   const fill    = document.getElementById('m-progress-fill');
   fill.style.width      = `${pos}%`;
   fill.style.background = isPos ? 'var(--green)' : 'var(--red)';
 
-  // Save last price to trade record
   const trades = getTrades();
   if (trades[sig.ticker]) {
     trades[sig.ticker].lastPrice = price;
-    // Auto-detect status
     if (price >= target)    trades[sig.ticker].status = 'won';
     else if (price <= sl)   trades[sig.ticker].status = 'lost';
     else                    trades[sig.ticker].status = 'active';
@@ -1689,8 +1663,6 @@ setInterval(refreshTradePrices, 30000);
 /* ════════════════════════════════════════════════════════
    EVENT LISTENERS
 ════════════════════════════════════════════════════════ */
-
-// Category nav
 document.querySelectorAll('.nav-item[data-cat]').forEach(el => {
   el.addEventListener('click', () => {
     currentCat = el.dataset.cat;
@@ -1700,7 +1672,6 @@ document.querySelectorAll('.nav-item[data-cat]').forEach(el => {
   });
 });
 
-// Sort
 document.querySelectorAll('.sort-item[data-sort]').forEach(el => {
   el.addEventListener('click', () => {
     currentSort = el.dataset.sort;
@@ -1710,7 +1681,6 @@ document.querySelectorAll('.sort-item[data-sort]').forEach(el => {
   });
 });
 
-// Watchlist / view switcher
 document.querySelectorAll('.watchlist-item[data-watchlist]').forEach(el => {
   el.addEventListener('click', () => {
     currentView = el.dataset.watchlist;
@@ -1720,22 +1690,18 @@ document.querySelectorAll('.watchlist-item[data-watchlist]').forEach(el => {
   });
 });
 
-// Search
 document.getElementById('search-input').addEventListener('input', e => {
   searchQuery = e.target.value.trim();
   renderGrid();
 });
 
-// Refresh button
 document.getElementById('btn-refresh').addEventListener('click', triggerRefresh);
 
-// Modal close
 document.getElementById('modal-close-btn').addEventListener('click', closeModal);
 document.getElementById('modal-overlay').addEventListener('click', e => {
   if (e.target === document.getElementById('modal-overlay')) closeModal();
 });
 
-// Trades panel
 document.getElementById('btn-trades-panel').addEventListener('click', () => {
   renderTradesPanel();
   document.getElementById('trades-panel').classList.toggle('open');
@@ -1744,7 +1710,6 @@ document.getElementById('trades-panel-close').addEventListener('click', () => {
   document.getElementById('trades-panel').classList.remove('open');
 });
 
-// Keyboard
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeModal();
   if (e.key === 'r' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); triggerRefresh(); }
@@ -1756,7 +1721,6 @@ document.addEventListener('keydown', e => {
 (async () => {
   updateTradeCountBadges();
   await loadAndRender();
-  // Auto-refresh every 5 min
   setInterval(loadAndRender, 5 * 60 * 1000);
 })();
 </script>
