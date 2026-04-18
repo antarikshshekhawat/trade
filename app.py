@@ -10,11 +10,18 @@ from typing import Dict, List
 
 
 
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory
 
 
 
-from data import FALLBACK_IPO_STOCKS, FALLBACK_UNIVERSE, build_stock_universe, get_default_provider
+from data import (
+    FALLBACK_IPO_STOCKS,
+    FALLBACK_UNIVERSE,
+    build_stock_universe,
+    fetch_last_prices_nse,
+    get_default_provider,
+)
+from sector_indices import get_sector_performance
 
 from strategy import scan_market
 
@@ -122,7 +129,7 @@ def apply_cors_headers(response):
 
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"
 
-    response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
 
     return response
 
@@ -135,7 +142,32 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+_sector_lock = Lock()
 
+_sector_cache: Dict[str, object] = {"payload": None, "expires_at": 0.0}
+
+SECTOR_CACHE_SECONDS = 35.0
+
+
+def _get_sectors_payload() -> Dict[str, object]:
+
+    now_ts = _utc_now().timestamp()
+
+    with _sector_lock:
+
+        if _sector_cache["payload"] is not None and now_ts < float(_sector_cache["expires_at"]):
+
+            return _sector_cache["payload"]  # type: ignore[return-value]
+
+    payload = get_sector_performance()
+
+    with _sector_lock:
+
+        _sector_cache["payload"] = payload
+
+        _sector_cache["expires_at"] = _utc_now().timestamp() + SECTOR_CACHE_SECONDS
+
+    return payload
 
 
 def _refresh_signals() -> None:
@@ -640,6 +672,20 @@ def api_refresh():
     worker = Thread(target=_refresh_signals, daemon=True)
     worker.start()
     return jsonify({"ok": True})
+
+
+@app.route("/sectors", methods=["GET"])
+@app.route("/api/sectors", methods=["GET"])
+def api_sectors():
+    return jsonify(_get_sectors_payload())
+
+
+@app.route("/api/quotes", methods=["GET"])
+def api_quotes():
+    raw = request.args.get("tickers", "") or ""
+    parts = [p.strip().upper().replace(".NS", "") for p in raw.split(",") if p.strip()]
+    prices = fetch_last_prices_nse(parts)
+    return jsonify({"prices": prices, "generated_at": _utc_now().isoformat()})
 
 
 @app.route("/health", methods=["GET"])
