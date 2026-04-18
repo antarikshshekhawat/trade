@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>NSE Alpha — Signal Terminal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap">
 <style>
 /* ══════════════════════════════════════════════════════════════
    DESIGN TOKENS & CYBERPUNK THEME
@@ -343,7 +343,7 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 }
 
 /* ══════════════════════════════════════════════════════════════
-   SIGNAL CARD
+   SIGNAL CARD (Exactly matching screenshot)
 ═══════════════════════════════════════════════════════════════ */
 .signal-card {
   background: var(--card);
@@ -458,75 +458,6 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
   color: var(--text-dim);
 }
 
-/* STATS GRID & RISK/REWARD */
-.c-stats-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 16px;
-}
-.stat-box {
-  background: var(--surface);
-  border-radius: 6px;
-  padding: 8px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.stat-title {
-  font-size: 9px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: 700;
-}
-.stat-value {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text);
-}
-.stat-value.val-target { color: var(--active); }
-.stat-value.val-sl { color: var(--loss); }
-
-.stat-sub {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--text-dim);
-}
-
-.c-rr {
-  margin-top: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.rr-title {
-  font-size: 9px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: 700;
-}
-.rr-value {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--ipo); 
-}
-.rr-bar {
-  height: 3px;
-  width: 120px;
-  background: var(--loss);
-  border-radius: 2px;
-  display: flex;
-  margin-top: 4px;
-}
-.rr-bar-fill {
-  background: var(--ipo);
-  border-radius: 0 2px 2px 0;
-}
-
 /* Row 5: Progress Bar */
 .c-row-5 {
   margin-top: auto;
@@ -598,6 +529,204 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 }
 #toast.show { display: block; animation: slideUp 0.3s ease; }
 @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* ═══ ALPHA V2 — neon glass, sector rail, my trades ═══ */
+:root {
+  --font-display: 'Outfit', var(--font-sans);
+  --glow-cyan: rgba(34, 211, 238, 0.45);
+  --glow-violet: rgba(167, 139, 250, 0.5);
+  --rail-w: 300px;
+  --sidebar-w: 260px;
+}
+html {
+  background: #06060f;
+}
+body {
+  font-family: var(--font-display);
+  background:
+    radial-gradient(ellipse 120% 80% at 20% -10%, rgba(99, 102, 241, 0.25), transparent 50%),
+    radial-gradient(ellipse 80% 50% at 100% 0%, rgba(34, 211, 238, 0.12), transparent 45%),
+    linear-gradient(180deg, #070712 0%, #0a0a18 40%, #050508 100%);
+  overflow: hidden;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+  mask-image: radial-gradient(ellipse 90% 70% at 50% 30%, black 20%, transparent 75%);
+}
+#app-container { position: relative; z-index: 1; }
+#main-area { min-width: 0; }
+.brand-text { font-family: var(--font-display); letter-spacing: -0.02em; }
+.brand-icon {
+  background: linear-gradient(135deg, #22d3ee, #a855f7);
+  box-shadow: 0 0 24px var(--glow-cyan), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+#sidebar, #topbar, #sector-rail {
+  background: rgba(12, 14, 28, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-color: rgba(148, 163, 184, 0.12);
+}
+.signal-card {
+  background: rgba(15, 18, 35, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255,255,255,0.04);
+  border-radius: 14px;
+}
+.signal-card:hover {
+  border-color: rgba(34, 211, 238, 0.35);
+  box-shadow: 0 8px 40px rgba(34, 211, 238, 0.08);
+}
+.nav-item.active {
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.12), transparent);
+  box-shadow: inset 3px 0 0 #22d3ee;
+}
+.auto-countdown {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(34, 211, 238, 0.25);
+  background: rgba(34, 211, 238, 0.06);
+}
+/* My trades form */
+.my-trade-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.my-trade-form input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(0,0,0,0.25);
+  font-size: 12px;
+}
+.my-trade-form input:focus { border-color: rgba(34, 211, 238, 0.5); }
+.btn-add-trade {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #22d3ee, #6366f1);
+  color: #0a0a12;
+  border: none;
+  cursor: pointer;
+}
+.btn-add-trade:hover { filter: brightness(1.08); }
+#my-trades-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.my-trade-row {
+  font-size: 11px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  position: relative;
+}
+.my-trade-row .t-name { font-weight: 800; font-size: 12px; letter-spacing: 0.04em; }
+.my-trade-row .t-line { color: var(--text-muted); margin-top: 4px; font-family: var(--font-mono); }
+.my-trade-row .t-status {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.st-open { color: #94a3b8; border: 1px solid rgba(148,163,184,0.3); }
+.st-tg { color: #4ade80; border: 1px solid rgba(74,222,128,0.4); background: rgba(74,222,128,0.1); }
+.st-sl { color: #f87171; border: 1px solid rgba(248,113,113,0.4); background: rgba(248,113,113,0.1); }
+.btn-del-trade {
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--text-muted);
+  text-decoration: underline;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+/* Sector rail */
+#sector-rail {
+  width: var(--rail-w);
+  min-width: var(--rail-w);
+  border-left: 1px solid rgba(148, 163, 184, 0.12);
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+}
+.sector-rail-head {
+  padding: 16px 16px 8px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+.sector-rail-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, #22d3ee, #c084fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hot-sector-card {
+  margin: 12px 16px;
+  padding: 14px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.15), rgba(168, 85, 247, 0.12));
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  box-shadow: 0 0 40px rgba(34, 211, 238, 0.12);
+}
+.hot-sector-card .label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+.hot-sector-card .name { font-size: 16px; font-weight: 800; margin-top: 4px; }
+.hot-sector-card .pct { font-family: var(--font-mono); font-size: 22px; font-weight: 800; margin-top: 8px; }
+.hot-sector-card .pct.up { color: #4ade80; }
+.hot-sector-card .pct.down { color: #f87171; }
+#sector-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px 24px;
+}
+.sector-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(148, 163, 184, 0.08);
+  font-size: 12px;
+}
+.sector-row .sn { font-weight: 600; }
+.sector-row .sp {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 12px;
+}
+.sector-row .sp.up { color: #4ade80; }
+.sector-row .sp.down { color: #f87171; }
+.sector-empty { padding: 24px; font-size: 12px; color: var(--text-muted); text-align: center; }
 </style>
 </head>
 <body>
@@ -668,6 +797,24 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
           <div class="nav-icon">⭐</div> High Priority
           <div class="nav-count" id="nav-count-watchlist" style="display:none">0</div>
         </div>
+        <div class="nav-item" data-view="mytrades">
+          <div class="nav-icon">✦</div> My trade book
+        </div>
+      </div>
+
+      <div>
+        <div class="nav-section-title">Plan trades (fixed)</div>
+        <p style="font-size:10px;color:var(--text-muted);line-height:1.4;margin-bottom:8px;padding:0 4px;">
+          Entry / SL / target stay fixed. Live price updates for tracking only.
+        </p>
+        <div class="my-trade-form" id="my-trade-form">
+          <input type="text" id="mt-ticker" placeholder="Ticker (e.g. TCS)" autocomplete="off" />
+          <input type="number" id="mt-entry" placeholder="Entry ₹" step="0.01" />
+          <input type="number" id="mt-sl" placeholder="Stop loss ₹" step="0.01" />
+          <input type="number" id="mt-tg" placeholder="Target ₹" step="0.01" />
+          <button type="button" class="btn-add-trade" id="btn-add-trade">Add to book</button>
+        </div>
+        <div id="my-trades-list"></div>
       </div>
     </div>
   </aside>
@@ -703,6 +850,7 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
       </div>
 
       <div class="topbar-right">
+        <div class="auto-countdown" id="auto-countdown">Next refresh: 20s</div>
         <div class="clock" id="clock">00:00:00 pm</div>
         <button class="btn-refresh" id="btn-refresh">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -736,28 +884,61 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
     </div>
 
   </main>
+
+  <aside id="sector-rail">
+    <div class="sector-rail-head">
+      <div class="sector-rail-title">Hot sectors</div>
+    </div>
+    <div id="hot-sector-host"></div>
+    <div id="sector-list">
+      <div class="sector-empty">Loading sector indices…</div>
+    </div>
+  </aside>
 </div>
 
 <div id="toast"></div>
 
 <script>
 /* STATE */
-let allSignals  = [];
-let currentCat  = 'all';
+let allSignals = [];
+let currentCat = 'all';
 let currentSort = 'score';
 let currentView = 'all';
 let searchQuery = '';
+let quoteMap = {};
 
 const LS_WATCHLIST = 'nse_watchlist_v2';
+const LS_MY_TRADES = 'nse_my_trades_v1';
+const REFRESH_MS = 20000;
+let secLeft = 20;
+
 const getWatchlist = () => new Set(JSON.parse(localStorage.getItem(LS_WATCHLIST) || '[]'));
 const saveWatchlist = (set) => localStorage.setItem(LS_WATCHLIST, JSON.stringify([...set]));
+
+function getMyTrades() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(LS_MY_TRADES) || '[]');
+    return Array.isArray(raw) ? raw : [];
+  } catch {
+    return [];
+  }
+}
+function saveMyTrades(rows) {
+  localStorage.setItem(LS_MY_TRADES, JSON.stringify(rows));
+}
 
 /* CLOCK */
 function updateClock() {
   const now = new Date();
   document.getElementById('clock').textContent = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
 }
-setInterval(updateClock, 1000); updateClock();
+setInterval(updateClock, 1000);
+updateClock();
+
+function updateCountdownEl() {
+  const el = document.getElementById('auto-countdown');
+  if (el) el.textContent = `Next refresh: ${secLeft}s`;
+}
 
 /* TOAST */
 let toastTimer;
@@ -766,63 +947,149 @@ function showToast(msg) {
   el.textContent = msg;
   el.className = 'show';
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.className = '', 2500);
+  toastTimer = setTimeout(() => { el.className = ''; }, 2500);
 }
 
-/* API FETCH */
+/* API */
 async function fetchSignals() {
   try {
     const res = await fetch('/api/signals');
-    if (!res.ok) throw new Error("Server Error");
+    if (!res.ok) throw new Error('Server Error');
     return await res.json();
   } catch (e) {
     return null;
   }
 }
 
-async function triggerRefresh() {
-  const btn = document.getElementById('btn-refresh');
-  btn.classList.add('spinning');
+async function fetchSectors() {
   try {
-    await fetch('/api/refresh', { method: 'POST' });
-    showToast('Background scan started. Refetching in 10s...');
-    setTimeout(async () => {
-      await loadAndRender();
-      btn.classList.remove('spinning');
-      showToast('Data refreshed');
-    }, 10000);
-  } catch {
-    showToast('Refresh failed');
-    btn.classList.remove('spinning');
+    const res = await fetch('/api/sectors');
+    if (!res.ok) return;
+    const d = await res.json();
+    renderSectorRail(d);
+  } catch (e) {
+    document.getElementById('sector-list').innerHTML = '<div class="sector-empty">Sector data unavailable</div>';
   }
 }
 
-/* LOAD & RENDER DATA */
+function renderSectorRail(d) {
+  const hotHost = document.getElementById('hot-sector-host');
+  const listEl = document.getElementById('sector-list');
+  const hot = d.hot;
+  if (hot) {
+    const up = hot.change_pct >= 0;
+    hotHost.innerHTML = `
+      <div class="hot-sector-card">
+        <div class="label">Leading sector (today)</div>
+        <div class="name">${hot.name}</div>
+        <div class="pct ${up ? 'up' : 'down'}">${up ? '+' : ''}${hot.change_pct.toFixed(2)}%</div>
+      </div>`;
+  } else {
+    hotHost.innerHTML = '<div class="sector-empty">No sector snapshot</div>';
+  }
+  const rows = (d.sectors || []).map(s => {
+    const up = s.change_pct >= 0;
+    return `<div class="sector-row"><span class="sn">${s.name}</span><span class="sp ${up ? 'up' : 'down'}">${up ? '+' : ''}${s.change_pct.toFixed(2)}%</span></div>`;
+  }).join('');
+  listEl.innerHTML = rows || '<div class="sector-empty">No index data</div>';
+}
+
+async function refreshQuotesForTrades() {
+  const trades = getMyTrades();
+  if (!trades.length) {
+    quoteMap = {};
+    return;
+  }
+  const tickers = [...new Set(trades.map(t => t.ticker))];
+  const missing = tickers.filter((t) => !allSignals.find((s) => s.ticker === t));
+  if (!missing.length) {
+    quoteMap = {};
+    return;
+  }
+  try {
+    const res = await fetch('/api/quotes?tickers=' + encodeURIComponent(missing.join(',')));
+    if (res.ok) {
+      const j = await res.json();
+      quoteMap = j.prices || {};
+    }
+  } catch (e) {
+    quoteMap = {};
+  }
+}
+
+function getLtp(ticker) {
+  const s = allSignals.find((x) => x.ticker === ticker);
+  if (s) return s.price != null ? s.price : s.entry;
+  return quoteMap[ticker] != null ? quoteMap[ticker] : null;
+}
+
+function tradeStatus(t, ltp) {
+  if (ltp == null) return 'open';
+  if (ltp >= t.target) return 'target';
+  if (ltp <= t.sl) return 'sl';
+  return 'open';
+}
+
+function tradeToCardSig(t, ltp) {
+  const st = tradeStatus(t, ltp);
+  const px = ltp != null ? ltp : t.entry;
+  const pnlPct = t.entry ? ((px - t.entry) / t.entry) * 100 : 0;
+  return {
+    ticker: t.ticker,
+    category: 'largecap',
+    pattern: 'My trade (fixed entry / SL / target)',
+    entry: t.entry,
+    price: px,
+    sl: t.sl,
+    target: t.target,
+    is_candidate: true,
+    mover_5d_pct: pnlPct,
+    _myTrade: true,
+    _tradeStatus: st,
+  };
+}
+
+async function triggerRefresh() {
+  const btn = document.getElementById('btn-refresh');
+  btn.classList.add('spinning');
+  secLeft = 20;
+  updateCountdownEl();
+  try {
+    await fetch('/api/refresh', { method: 'POST' });
+    showToast('Rescan started…');
+    await new Promise((r) => setTimeout(r, 8000));
+    await fullRefresh();
+    showToast('Updated');
+  } catch {
+    showToast('Refresh failed');
+  }
+  btn.classList.remove('spinning');
+}
+
 async function loadAndRender() {
   const grid = document.getElementById('cards-grid');
-  
+
   const data = await fetchSignals();
   if (!data || !data.signals) {
-    grid.innerHTML = `<div class="state-message">⚠️ Scan failed or timed out. Please try clicking Refresh.</div>`;
+    grid.innerHTML = `<div class="state-message">⚠️ Scan failed or timed out. Try Refresh.</div>`;
     return;
   }
 
   allSignals = data.signals || [];
-  const c = data.counts || {};
   const derived = { all: allSignals.length, largecap: 0, midcap: 0, smallcap: 0, ipo: 0 };
-  allSignals.forEach(s => {
+  allSignals.forEach((s) => {
     const cat = (s.category || '').toLowerCase();
     if (cat in derived) derived[cat]++;
   });
-  const counts = { ...derived, ...c };
+  const c = { ...derived, ...(data.counts || {}) };
 
-  const updateCounts = (idList, val) => idList.forEach(id => { if(document.getElementById(id)) document.getElementById(id).textContent = val; });
+  const updateCounts = (idList, val) => idList.forEach((id) => { if (document.getElementById(id)) document.getElementById(id).textContent = val; });
 
-  updateCounts(['nav-count-all', 'top-val-all'], counts.all ?? allSignals.length);
-  updateCounts(['nav-count-large', 'top-val-large'], counts.largecap ?? 0);
-  updateCounts(['nav-count-mid', 'top-val-mid'], counts.midcap ?? 0);
-  updateCounts(['nav-count-small', 'top-val-small'], counts.smallcap ?? 0);
-  updateCounts(['nav-count-ipo', 'top-val-ipo'], counts.ipo ?? 0);
+  updateCounts(['nav-count-all', 'top-val-all'], c.all ?? allSignals.length);
+  updateCounts(['nav-count-large', 'top-val-large'], c.largecap ?? 0);
+  updateCounts(['nav-count-mid', 'top-val-mid'], c.midcap ?? 0);
+  updateCounts(['nav-count-small', 'top-val-small'], c.smallcap ?? 0);
+  updateCounts(['nav-count-ipo', 'top-val-ipo'], c.ipo ?? 0);
 
   const cs = data.cache_status || {};
   const fromCache = cs.from_cache ?? data.from_cache;
@@ -830,27 +1097,57 @@ async function loadAndRender() {
   document.getElementById('cache-badge').style.display = fromCache ? 'block' : 'none';
   document.getElementById('last-updated-text').textContent = lastUpd ? `Last updated: ${lastUpd}` : '';
 
+  await refreshQuotesForTrades();
+  renderMyTradesSidebar();
   renderGrid();
 }
 
-/* FILTERS & SORTING */
+function renderMyTradesSidebar() {
+  const host = document.getElementById('my-trades-list');
+  const trades = getMyTrades();
+  if (!trades.length) {
+    host.innerHTML = '<div style="font-size:10px;color:var(--text-muted);padding:4px;">No saved trades yet.</div>';
+    return;
+  }
+  host.innerHTML = trades.map((t) => {
+    const ltp = getLtp(t.ticker);
+    const st = tradeStatus(t, ltp);
+    const stHtml = st === 'target' ? '<span class="t-status st-tg">Target</span>' : st === 'sl' ? '<span class="t-status st-sl">Stop</span>' : '<span class="t-status st-open">Open</span>';
+    const ltpStr = ltp != null ? ltp.toFixed(2) : '—';
+    return `<div class="my-trade-row" data-id="${t.id}">
+      ${stHtml}
+      <div class="t-name">${t.ticker}</div>
+      <div class="t-line">E ${t.entry.toFixed(2)} · SL ${t.sl.toFixed(2)} · T ${t.target.toFixed(2)}</div>
+      <div class="t-line">LTP ${ltpStr}</div>
+      <button type="button" class="btn-del-trade" data-id="${t.id}">Remove</button>
+    </div>`;
+  }).join('');
+  host.querySelectorAll('.btn-del-trade').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-id');
+      saveMyTrades(getMyTrades().filter((x) => x.id !== id));
+      showToast('Removed');
+      renderMyTradesSidebar();
+      renderGrid();
+    });
+  });
+}
+
 function getVisibleSignals() {
   const watchlist = getWatchlist();
   let signals = [...allSignals];
 
-  if (currentView === 'watchlist') signals = signals.filter(s => watchlist.has(s.ticker));
-  if (currentCat !== 'all') signals = signals.filter(s => (s.category || '').toLowerCase() === currentCat);
+  if (currentView === 'watchlist') signals = signals.filter((s) => watchlist.has(s.ticker));
+  if (currentCat !== 'all') signals = signals.filter((s) => (s.category || '').toLowerCase() === currentCat);
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
-    signals = signals.filter(s => s.ticker.toLowerCase().includes(q) || (s.pattern || '').toLowerCase().includes(q));
+    signals = signals.filter((s) => s.ticker.toLowerCase().includes(q) || (s.pattern || '').toLowerCase().includes(q));
   }
 
   signals.sort((a, b) => {
     if (currentSort === 'rr') return (b.rr || 0) - (a.rr || 0);
     if (currentSort === 'target') return (b.target_pct || 0) - (a.target_pct || 0);
     if (currentSort === 'ticker') return a.ticker.localeCompare(b.ticker);
-    
-    // Default: Score. Prioritize candidates.
     const aCand = a.is_candidate ? 1 : 0;
     const bCand = b.is_candidate ? 1 : 0;
     if (bCand !== aCand) return bCand - aCand;
@@ -861,29 +1158,45 @@ function getVisibleSignals() {
 }
 
 function renderGrid() {
-  const signals = getVisibleSignals();
-  const watchlist = getWatchlist();
   const grid = document.getElementById('cards-grid');
+  const watchlist = getWatchlist();
+
+  if (currentView === 'mytrades') {
+    const trades = getMyTrades();
+    document.getElementById('header-count').textContent = trades.length;
+    document.getElementById('nav-count-watchlist').textContent = watchlist.size;
+    document.getElementById('nav-count-watchlist').style.display = watchlist.size > 0 ? 'block' : 'none';
+    if (!trades.length) {
+      grid.innerHTML = '<div class="state-message">Add a trade (ticker, entry, SL, target) in the sidebar.</div>';
+      return;
+    }
+    grid.innerHTML = '';
+    trades.forEach((t) => {
+      const ltp = getLtp(t.ticker);
+      grid.appendChild(buildCard(tradeToCardSig(t, ltp), false));
+    });
+    return;
+  }
+
+  const signals = getVisibleSignals();
 
   document.getElementById('header-count').textContent = signals.length;
-  
-  // Update watchlist badge
+
   const wlBadge = document.getElementById('nav-count-watchlist');
   wlBadge.textContent = watchlist.size;
   wlBadge.style.display = watchlist.size > 0 ? 'block' : 'none';
 
   if (signals.length === 0) {
-    grid.innerHTML = `<div class="state-message">📭 No signals match current filters</div>`;
+    grid.innerHTML = '<div class="state-message">📭 No signals match current filters</div>';
     return;
   }
 
   grid.innerHTML = '';
-  signals.forEach(sig => {
+  signals.forEach((sig) => {
     grid.appendChild(buildCard(sig, watchlist.has(sig.ticker)));
   });
 }
 
-/* CARD BUILDER */
 function buildCard(sig, inWatch) {
   const div = document.createElement('div');
   div.className = `signal-card ${sig.is_candidate ? 'active-trade' : ''}`;
@@ -891,102 +1204,63 @@ function buildCard(sig, inWatch) {
   const cat = (sig.category || 'largecap').toUpperCase();
   const catClass = cat.toLowerCase();
   const pattern = sig.pattern || 'Momentum Trend Candidate';
-  
-  // Base Variables
-  const entry = sig.entry || sig.price || 0;
-  const price = entry.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const ltp = sig.price != null ? sig.price : sig.entry;
+  const priceStr = (ltp || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const mover = sig.mover_5d_pct || 0;
-  const changeStr = `${mover >= 0 ? '+' : ''}${mover.toFixed(2)}%`;
-  
+  const changeStr = sig._myTrade
+    ? `P&L vs entry ${mover >= 0 ? '+' : ''}${mover.toFixed(2)}%`
+    : `${mover >= 0 ? '+' : ''}${mover.toFixed(2)}%`;
+
   const sl = sig.sl || 0;
   const target = sig.target || 0;
-  const lastClose = sig.last_close || entry;
 
-  // Percentage Calculations
-  const targetPct = entry ? (((target - entry) / entry) * 100) : 0;
-  const slPct = entry ? (((entry - sl) / entry) * 100) : 0;
-
-  // Risk Reward Calculation
-  let rrRatio = "0.0";
-  let rrRewardPct = 66; // Default visual placement for the RR bar
-  if (entry - sl > 0) {
-    const risk = entry - sl;
-    const reward = target - entry;
-    const ratio = reward / risk;
-    rrRatio = ratio.toFixed(1);
-    
-    // Determine how much of the RR bar should be yellow (reward)
-    const total = 1 + ratio;
-    rrRewardPct = (ratio / total) * 100;
-    if (rrRewardPct > 85) rrRewardPct = 85; // Cap visual length
-  }
-
-  // Calculate relative positions for the bottom progress bar
   const range = target - sl;
-  let entryPct = 30; // default visual placement
+  let entryPct = 30;
   let slW = 30;
   let tgtW = 70;
-  if(range > 0 && entry) {
-     entryPct = ((entry - sl) / range) * 100;
-     slW = entryPct;
-     tgtW = 100 - entryPct;
+  if (range > 0 && sig.entry) {
+    entryPct = ((sig.entry - sl) / range) * 100;
+    slW = entryPct;
+    tgtW = 100 - entryPct;
   }
+
+  let statusBadge = '<span class="badge status">• ACTIVE</span>';
+  if (sig._myTrade) {
+    if (sig._tradeStatus === 'target') statusBadge = '<span class="badge status" style="border-color:rgba(74,222,128,0.6);color:#4ade80">TARGET HIT</span>';
+    else if (sig._tradeStatus === 'sl') statusBadge = '<span class="badge status" style="border-color:rgba(248,113,113,0.6);color:#f87171">SL HIT</span>';
+    else statusBadge = '<span class="badge status">• TRACKING</span>';
+  }
+
+  const wlBtn = sig._myTrade
+    ? ''
+    : `<button class="btn-add ${inWatch ? 'saved' : ''}" title="Toggle Watchlist">${inWatch ? '★' : '+'}</button>`;
+
+  const subLine = sig._myTrade
+    ? `Fixed entry ₹${(sig.entry || 0).toFixed(2)} · live LTP (updates) · SL ₹${sl.toFixed(2)} · T ₹${target.toFixed(2)}`
+    : `• ${pattern}`;
 
   div.innerHTML = `
     <div class="c-row-1">
       <div class="c-ticker-top">${sig.ticker}</div>
       <div class="c-pattern-top">${pattern}</div>
     </div>
-    
     <div class="c-row-2">
       <div class="c-ticker-sub">${sig.ticker}</div>
       <div class="c-badges">
         <span class="badge ${catClass}">${cat}</span>
-        <span class="badge status">• ACTIVE</span>
-        <button class="btn-add ${inWatch ? 'saved' : ''}" title="Toggle Watchlist">${inWatch ? '★' : '+'}</button>
+        ${statusBadge}
+        ${wlBtn}
       </div>
     </div>
-    
-    <div class="c-row-3">• ${pattern}</div>
-    
+    <div class="c-row-3">${subLine}</div>
     <div class="c-row-4">
-      <div class="c-price">₹${price}</div>
+      <div class="c-price">₹${priceStr}</div>
       <div class="c-change" style="color: ${mover >= 0 ? 'var(--active)' : 'var(--text-dim)'}">${changeStr}</div>
     </div>
-
-    <div class="c-stats-grid">
-      <div class="stat-box">
-        <div class="stat-title">ENTRY</div>
-        <div class="stat-value">₹${entry.toFixed(2)}</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-title">TARGET</div>
-        <div class="stat-value val-target">₹${target.toFixed(2)}</div>
-        <div class="stat-sub">+${targetPct.toFixed(2)}%</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-title">STOP LOSS</div>
-        <div class="stat-value val-sl">₹${sl.toFixed(2)}</div>
-        <div class="stat-sub">-${slPct.toFixed(2)}%</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-title">LAST CLOSE</div>
-        <div class="stat-value">₹${lastClose.toFixed(2)}</div>
-      </div>
-    </div>
-
-    <div class="c-rr">
-      <div class="rr-title">RISK : REWARD</div>
-      <div class="rr-value">1:${rrRatio}</div>
-      <div class="rr-bar">
-         <div class="rr-bar-fill" style="width: ${rrRewardPct}%; margin-left: auto;"></div>
-      </div>
-    </div>
-    
     <div class="c-row-5">
       <div class="prog-labels">
-        <span>SL ₹${sl.toFixed(2)}</span>
-        <span>Target ₹${target.toFixed(2)}</span>
+        <span>SL ${sl.toFixed(2)}</span>
+        <span>Target ${target.toFixed(2)}</span>
       </div>
       <div class="prog-bar-container">
         <div class="prog-fill sl" style="width: ${slW}%"></div>
@@ -996,59 +1270,104 @@ function buildCard(sig, inWatch) {
     </div>
   `;
 
-  // Watchlist Event
-  div.querySelector('.btn-add').addEventListener('click', e => {
-    e.stopPropagation();
-    const wl = getWatchlist();
-    if (wl.has(sig.ticker)) {
-      wl.delete(sig.ticker);
-      showToast(`${sig.ticker} removed`);
-    } else {
-      wl.add(sig.ticker);
-      showToast(`${sig.ticker} saved ⭐`);
-    }
-    saveWatchlist(wl);
-    renderGrid();
-  });
+  const addBtn = div.querySelector('.btn-add');
+  if (addBtn) {
+    addBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const wl = getWatchlist();
+      if (wl.has(sig.ticker)) {
+        wl.delete(sig.ticker);
+        showToast(`${sig.ticker} removed`);
+      } else {
+        wl.add(sig.ticker);
+        showToast(`${sig.ticker} saved ⭐`);
+      }
+      saveWatchlist(wl);
+      renderGrid();
+    });
+  }
 
   return div;
 }
 
-/* EVENT LISTENERS */
-document.querySelectorAll('.nav-item[data-cat]').forEach(el => {
+async function fullRefresh() {
+  await loadAndRender();
+  await fetchSectors();
+  secLeft = 20;
+  updateCountdownEl();
+}
+
+document.querySelectorAll('.nav-item[data-cat]').forEach((el) => {
   el.addEventListener('click', () => {
-    currentCat = el.dataset.cat; currentView = 'all';
-    document.querySelectorAll('.nav-item[data-cat], .nav-item[data-view]').forEach(x => x.classList.remove('active'));
-    el.classList.add('active'); renderGrid();
+    currentCat = el.dataset.cat;
+    currentView = 'all';
+    document.querySelectorAll('.nav-item[data-cat], .nav-item[data-view]').forEach((x) => x.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelector('.nav-item[data-view="all"]').classList.add('active');
+    renderGrid();
   });
 });
 
-document.querySelectorAll('.nav-item[data-sort]').forEach(el => {
+document.querySelectorAll('.nav-item[data-sort]').forEach((el) => {
   el.addEventListener('click', () => {
     currentSort = el.dataset.sort;
-    document.querySelectorAll('.nav-item[data-sort]').forEach(x => x.classList.remove('active'));
-    el.classList.add('active'); renderGrid();
+    document.querySelectorAll('.nav-item[data-sort]').forEach((x) => x.classList.remove('active'));
+    el.classList.add('active');
+    renderGrid();
   });
 });
 
-document.querySelectorAll('.nav-item[data-view]').forEach(el => {
+document.querySelectorAll('.nav-item[data-view]').forEach((el) => {
   el.addEventListener('click', () => {
     currentView = el.dataset.view;
-    document.querySelectorAll('.nav-item[data-cat], .nav-item[data-view]').forEach(x => x.classList.remove('active'));
-    el.classList.add('active'); renderGrid();
+    document.querySelectorAll('.nav-item[data-cat], .nav-item[data-view]').forEach((x) => x.classList.remove('active'));
+    el.classList.add('active');
+    renderGrid();
   });
 });
 
-document.getElementById('search-input').addEventListener('input', e => {
-  searchQuery = e.target.value.trim(); renderGrid();
+document.getElementById('search-input').addEventListener('input', (e) => {
+  searchQuery = e.target.value.trim();
+  renderGrid();
 });
 
-document.getElementById('btn-refresh').addEventListener('click', triggerRefresh);
+document.getElementById('btn-refresh').addEventListener('click', () => triggerRefresh());
 
-/* INIT */
+document.getElementById('btn-add-trade').addEventListener('click', () => {
+  const ticker = document.getElementById('mt-ticker').value.trim().toUpperCase();
+  const entry = parseFloat(document.getElementById('mt-entry').value);
+  const sl = parseFloat(document.getElementById('mt-sl').value);
+  const tg = parseFloat(document.getElementById('mt-tg').value);
+  if (!ticker || !Number.isFinite(entry) || !Number.isFinite(sl) || !Number.isFinite(tg)) {
+    showToast('Fill ticker, entry, SL, and target');
+    return;
+  }
+  if (!(sl < entry && entry < tg)) {
+    showToast('Long setup: SL < Entry < Target');
+    return;
+  }
+  const arr = getMyTrades();
+  arr.push({ id: String(Date.now()) + Math.random().toString(16).slice(2), ticker, entry, sl, target: tg });
+  saveMyTrades(arr);
+  document.getElementById('mt-ticker').value = '';
+  document.getElementById('mt-entry').value = '';
+  document.getElementById('mt-sl').value = '';
+  document.getElementById('mt-tg').value = '';
+  showToast(`${ticker} added to book`);
+  renderMyTradesSidebar();
+  if (currentView === 'mytrades') renderGrid();
+});
+
+setInterval(() => {
+  secLeft = Math.max(0, secLeft - 1);
+  updateCountdownEl();
+}, 1000);
+
+setInterval(fullRefresh, REFRESH_MS);
+
 (async () => {
-  await loadAndRender();
-  setInterval(loadAndRender, 5 * 60 * 1000); // 5 min auto-refresh
+  updateCountdownEl();
+  await fullRefresh();
 })();
 </script>
 </body>
