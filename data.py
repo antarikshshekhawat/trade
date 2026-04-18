@@ -1,15 +1,14 @@
 from __future__ import annotations
 
+import urllib.request
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from io import StringIO
 from typing import Dict, List
-from urllib.request import urlopen
 import time
 
 import pandas as pd
 import yfinance as yf
-
 
 # ─────────────────────────────────────────────────────────────
 # INDEX DATA SOURCES
@@ -20,7 +19,6 @@ INDEX_URLS = {
     "midcap": "https://niftyindices.com/IndexConstituent/ind_niftymidcap100list.csv",
     "smallcap": "https://niftyindices.com/IndexConstituent/ind_niftysmallcap100list.csv",
 }
-
 
 FALLBACK_UNIVERSE = {
     "largecap": [
@@ -39,12 +37,10 @@ FALLBACK_UNIVERSE = {
     ],
 }
 
-
 FALLBACK_IPO_STOCKS = [
     "TATATECH","AWL","MEDANTA","MANKIND",
     "IREDA","DOMS","ZOMATO","NYKAA","PAYTM","LATENTVIEW"
 ]
-
 
 # ─────────────────────────────────────────────────────────────
 # HELPERS
@@ -53,11 +49,9 @@ FALLBACK_IPO_STOCKS = [
 def _clean_symbol(symbol: str) -> str:
     return str(symbol).strip().upper().replace(".NS", "")
 
-
 def _to_nse_ticker(symbol: str) -> str:
     s = _clean_symbol(symbol)
     return f"{s}.NS" if s else ""
-
 
 # ─────────────────────────────────────────────────────────────
 # LOAD SYMBOLS FROM NSE
@@ -65,7 +59,12 @@ def _to_nse_ticker(symbol: str) -> str:
 
 def _load_index_symbols(url: str) -> List[str]:
     try:
-        with urlopen(url, timeout=5) as response:
+        # Added User-Agent to prevent 403 Forbidden blocks from NSE
+        req = urllib.request.Request(
+            url, 
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        )
+        with urllib.request.urlopen(req, timeout=10) as response:
             raw_csv = response.read().decode("utf-8", errors="ignore")
 
         df = pd.read_csv(StringIO(raw_csv))
@@ -78,7 +77,6 @@ def _load_index_symbols(url: str) -> List[str]:
         print(f"[DATA ERROR] Failed to load index from {url}: {e}")
 
     return []
-
 
 # ─────────────────────────────────────────────────────────────
 # BUILD STOCK UNIVERSE
@@ -99,12 +97,10 @@ def build_stock_universe() -> Dict[str, List[str]]:
     universe["ipo"] = FALLBACK_IPO_STOCKS
     return universe
 
-
 @dataclass
 class StockRecord:
     symbol: str
     category: str
-
 
 def flatten_universe(universe: Dict[str, List[str]]) -> List[StockRecord]:
     records = []
@@ -115,7 +111,6 @@ def flatten_universe(universe: Dict[str, List[str]]) -> List[StockRecord]:
                 records.append(StockRecord(s, category))
     return records
 
-
 # ─────────────────────────────────────────────────────────────
 # DATA PROVIDERS
 # ─────────────────────────────────────────────────────────────
@@ -124,7 +119,6 @@ class MarketDataProvider(ABC):
     @abstractmethod
     def get_ohlc(self, symbol: str, period="8mo", interval="1d") -> pd.DataFrame:
         pass
-
 
 class YFinanceDataProvider(MarketDataProvider):
 
@@ -151,11 +145,11 @@ class YFinanceDataProvider(MarketDataProvider):
                 if df.empty:
                     continue
 
-                # ✅ Fix multi-index columns
+                # ✅ Safely fix multi-index columns for newer yfinance versions
                 if isinstance(df.columns, pd.MultiIndex):
-                    df.columns = [c[0].lower() for c in df.columns]
+                    df.columns = [str(c[0]).lower() for c in df.columns]
                 else:
-                    df.columns = [c.lower() for c in df.columns]
+                    df.columns = [str(c).lower() for c in df.columns]
 
                 required = ["open", "high", "low", "close", "volume"]
 
@@ -179,7 +173,6 @@ class YFinanceDataProvider(MarketDataProvider):
 class BrokerRealtimeProvider(MarketDataProvider):
     def get_ohlc(self, symbol: str, period="8mo", interval="1d") -> pd.DataFrame:
         raise NotImplementedError("Add broker API here later")
-
 
 # ─────────────────────────────────────────────────────────────
 # DEFAULT PROVIDER
