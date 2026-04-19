@@ -59,25 +59,43 @@ def _prepare_indicators(frame: pd.DataFrame) -> pd.DataFrame:
     return df.dropna().copy()
 
 
-def _score_candidate(row: pd.Series) -> float:
-    """Improved scoring function with safe fallbacks."""
+def _score_candidate(row: pd.Series) -> Tuple[float, List[str]]:
+    """Calculates a 0-100 confidence score and returns the matched technical reasons."""
     ema20 = float(row.get("ema20", 0.0))
     ema50 = float(row.get("ema50", 0.0))
     macdh = float(row.get("macdh", 0.0))
     rsi14 = float(row.get("rsi14", 50.0))
+    vol = float(row.get("volume", 0.0))
+    vol_sma20 = float(row.get("vol_sma20", 0.0))
     
-    score = 50.0
+    score = 20.0  # Base line score
+    reasons = []
 
+    # 1. EMA Trend
     if ema20 > ema50:
-        score += 15
-    if macdh > 0:
-        score += 15
+        score += 25.0
+        reasons.append("EMA Trend")
+        
+    # 2. RSI Zone
     if 45 <= rsi14 <= 65:
-        score += 10
+        score += 20.0
+        reasons.append("RSI Zone")
+    elif rsi14 > 65:
+        score += 10.0
+        reasons.append("RSI (Overbought)")
 
-    score += min(max(macdh * 50, 0), 10)
+    # 3. MACD Strength
+    if macdh > 0:
+        score += 20.0
+        reasons.append("MACD Strength")
 
-    return round(score, 2)
+    # 4. Volume Spike
+    if vol_sma20 > 0 and vol > (1.5 * vol_sma20):
+        score += 15.0
+        reasons.append("Volume Spike")
+
+    score = min(max(score, 0), 100.0) # Ensure it stays between 0-100
+    return round(score, 2), reasons
 
 
 def _rr_format(entry: float, sl: float, target: float) -> Tuple[float, str]:
@@ -209,9 +227,14 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
         prev_close = float(frame["close"].iloc[-2]) if len(frame) >= 2 else float(last_row.get("close", 0.0))
 
         # 1. Momentum Breakout
+# 1. Momentum Breakout
         if last_close >= high20_prev and vol_sma20 > 0 and last_volume >= 2.0 * vol_sma20:
             breakout = _build_signal(symbol, category, last_row, "Momentum Breakout")
-            score = float(_score_candidate(last_row)) + 20.0
+            conf_score, reasons = _score_candidate(last_row) # NEW
+            score = conf_score + 20.0 # Keep original sorting logic
+            
+            breakout["confidence_score"] = conf_score # NEW
+            breakout["confidence_reasons"] = reasons  # NEW
             breakout["candidate_score"] = score
             breakout["is_candidate"] = True
             breakout["mover_5d_pct"] = float(_mover_score(frame) or 0.0)
@@ -222,8 +245,12 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
         # 2. MACD Reversal
         if macd_cross_up and rsi_ok and ema_trend_ok:
             sig = _build_signal(symbol, category, last_row, "MACD Cross + RSI Zone + EMA Trend")
+            conf_score, reasons = _score_candidate(last_row) # NEW
+            score = conf_score + 10.0
+            
+            sig["confidence_score"] = conf_score # NEW
+            sig["confidence_reasons"] = reasons  # NEW
             sig["is_candidate"] = True 
-            score = float(_score_candidate(last_row)) + 10.0
             sig["candidate_score"] = score
             sig["last_close"] = round(prev_close, 2)
             _attach_strategy_fields(sig, score, last_rsi, ema20, ema50)
@@ -232,7 +259,11 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
         # 3. Trend Continuation Candidate
         if ema_trend_ok and last_macdh > 0 and 38 <= last_rsi <= 72:
             candidate = _build_signal(symbol, category, last_row, "Momentum Trend Candidate")
-            score = float(_score_candidate(last_row))
+            conf_score, reasons = _score_candidate(last_row) # NEW
+            score = conf_score
+            
+            candidate["confidence_score"] = conf_score # NEW
+            candidate["confidence_reasons"] = reasons  # NEW
             candidate["candidate_score"] = score
             candidate["is_candidate"] = True
             mover = _mover_score(frame)
@@ -245,24 +276,19 @@ def scan_symbol(provider: MarketDataProvider, symbol: str, category: str) -> Opt
         # --- SAFE FALLBACK FOR ALL OTHER STOCKS ---
         try:
             current_close = float(last_row.get("close", 100.0))
-            current_score = float(_score_candidate(last_row))
+            conf_score, reasons = _score_candidate(last_row) # NEW
+            current_score = conf_score
         except:
             return None
 
         fallback = {
-            "ticker": symbol,
-            "category": category,
-            "pattern": "No Strong Signal",
-            "price": round(current_close, 2),
-            "entry": round(current_close, 2),
-            "target": round(current_close * 1.06, 2),
-            "sl": round(current_close * 0.98, 2),
-            "rr": 3.0,
-            "rr_text": "1:3.0",
+            # ... (keep your existing fallback dictionary fields here) ...
             "sl_pct": -2.0,
             "target_pct": 6.0,
             "last_close": round(prev_close, 2),
             "candidate_score": current_score,
+            "confidence_score": conf_score,  # NEW
+            "confidence_reasons": reasons,   # NEW
             "is_candidate": False
         }
         _attach_strategy_fields(fallback, current_score, last_rsi, ema20, ema50)
