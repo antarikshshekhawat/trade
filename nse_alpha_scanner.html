@@ -495,6 +495,62 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
   background: rgba(148, 163, 184, 0.1);
   color: var(--text-dim);
 }
+   /* Confidence Score Module */
+.confidence-wrap {
+  margin-top: 6px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 8px;
+}
+.conf-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.conf-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.conf-score {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 800;
+}
+.conf-score.high { color: #4ade80; text-shadow: 0 0 10px rgba(74, 222, 128, 0.3); }
+.conf-score.med { color: #facc15; }
+.conf-score.low { color: #f87171; }
+.conf-bar-bg {
+  height: 3px;
+  background: rgba(0,0,0,0.4);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.conf-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #3b82f6, #22d3ee);
+  transition: width 0.5s ease-out;
+}
+.conf-reasons {
+  font-size: 9px;
+  color: var(--text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+.conf-reason-pill {
+  background: rgba(148, 163, 184, 0.1);
+  padding: 3px 6px;
+  border-radius: 4px;
+  color: #e2e8f0;
+}
 
 /* Row 5: Progress Bar */
 .c-row-5 {
@@ -1504,64 +1560,35 @@ function buildCard(sig, inWatch) {
   const div = document.createElement('div');
   div.className = `signal-card ${sig.is_candidate ? 'active-trade' : ''}`;
 
-  const { badgeClass, labelText } = categoryLabelFromKey(sig.category);
-  const pattern = sig.pattern || 'Momentum Trend Candidate';
-  const ltp = sig.price != null ? sig.price : sig.entry;
-  const priceStr = (ltp || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const mover = sig.mover_5d_pct || 0;
-  const sl = sig.sl || 0;
-  const target = sig.target || 0;
-  const entry = sig.entry || ltp || 0;
-  const lastClose = sig.last_close != null ? sig.last_close : entry;
-  const rrNum = Number(sig.rr || 0);
-  const rrText = sig.rr_text || `1:${rrNum.toFixed(2)}`;
-  const slPct = Number(sig.sl_pct != null ? sig.sl_pct : (entry > 0 ? ((sl / entry) - 1) * 100 : 0));
-  const targetPct = Number(sig.target_pct != null ? sig.target_pct : (entry > 0 ? ((target / entry) - 1) * 100 : 0));
-  const duration = sig.duration || 'Mid-term';
-  const riskPct = entry > 0 ? ((entry - sl) / entry) * 100 : 0;
-  const lowRiskHighReward = Boolean(sig.risk_bucket_low_high) || (riskPct <= 3.0 && rrNum >= 2.0);
-  const highRiskHighReward = Boolean(sig.risk_bucket_high_high) || (riskPct > 3.0 && rrNum >= 2.0);
+  // ... [Keep your existing variable declarations like badgeClass, sl, target, etc.] ...
+  
+  // NEW CONFIDENCE LOGIC
+  const confScore = Number(sig.confidence_score !== undefined ? sig.confidence_score : 50).toFixed(0);
+  const reasons = sig.confidence_reasons || [];
+  let scoreColor = 'low';
+  if (confScore >= 75) scoreColor = 'high';
+  else if (confScore >= 55) scoreColor = 'med';
 
-  let priceDirClass = 'flat';
-  let chClass = 'flat';
-  let displayChangeStr = '';
-  if (sig._myTrade) {
-    displayChangeStr = `P&L vs entry ${mover >= 0 ? '+' : ''}${mover.toFixed(2)}%`;
-    if (mover > 0.01) { priceDirClass = 'up'; chClass = 'up'; }
-    else if (mover < -0.01) { priceDirClass = 'down'; chClass = 'down'; }
-  } else {
-    const dayCh = lastClose > 0 ? ((ltp - lastClose) / lastClose) * 100 : 0;
-    displayChangeStr = `${dayCh >= 0 ? '+' : ''}${dayCh.toFixed(2)}%`;
-    if (dayCh > 0.01) { priceDirClass = 'up'; chClass = 'up'; }
-    else if (dayCh < -0.01) { priceDirClass = 'down'; chClass = 'down'; }
-  }
+  const reasonsHtml = reasons.map(r => `<span class="conf-reason-pill">${r}</span>`).join('');
+  const confidenceHtml = `
+    <div class="confidence-wrap">
+      <div class="conf-header">
+        <span class="conf-title">Confidence</span>
+        <span class="conf-score ${scoreColor}">${confScore}/100</span>
+      </div>
+      <div class="conf-bar-bg">
+        <div class="conf-bar-fill" style="width: ${confScore}%"></div>
+      </div>
+      <div class="conf-reasons">
+        <span style="color:var(--text-dim);">Based on:</span>
+        ${reasonsHtml || '<span class="conf-reason-pill">Baseline Data</span>'}
+      </div>
+    </div>
+  `;
 
-  const range = target - sl;
-  let entryPct = 30;
-  let slW = 30;
-  let tgtW = 70;
-  if (range > 0 && sig.entry) {
-    entryPct = ((sig.entry - sl) / range) * 100;
-    slW = entryPct;
-    tgtW = 100 - entryPct;
-  }
+  // ... [Keep your existing statusBadge, wlBtn, chartBtn, etc.] ...
 
-  let statusBadge = '<span class="badge status">• ACTIVE</span>';
-  if (sig._myTrade) {
-    if (sig._tradeStatus === 'target') statusBadge = '<span class="badge status" style="border-color:rgba(74,222,128,0.6);color:#4ade80">TARGET HIT</span>';
-    else if (sig._tradeStatus === 'sl') statusBadge = '<span class="badge status" style="border-color:rgba(248,113,113,0.6);color:#f87171">SL HIT</span>';
-    else statusBadge = '<span class="badge status">• TRACKING</span>';
-  }
-
-  const wlBtn = sig._myTrade
-    ? ''
-    : `<button class="btn-add ${inWatch ? 'saved' : ''}" title="Toggle Watchlist">${inWatch ? '★' : '+'}</button>`;
-  const chartBtn = chartButtonHtml(sig.ticker);
-
-  const subLine = sig._myTrade
-    ? `Fixed entry ₹${(sig.entry || 0).toFixed(2)} · live LTP (updates) · SL ₹${sl.toFixed(2)} · T ₹${target.toFixed(2)}`
-    : '';
-
+  // Update div.innerHTML to include ${confidenceHtml}
   div.innerHTML = `
     <div class="c-row-1">
       <div class="c-ticker-top">${sig.ticker}</div>
@@ -1582,7 +1609,8 @@ function buildCard(sig, inWatch) {
       </div>
       <div class="c-chart-slot">${chartBtn}</div>
     </div>
-    <div class="c-metrics-grid">
+    
+    ${confidenceHtml} <div class="c-metrics-grid">
       <div class="metric-box entry"><div class="k">ENTRY</div><div class="v">₹${entry.toFixed(2)}</div></div>
       <div class="metric-box slstop"><div class="k">STOP LOSS</div><div class="v">₹${sl.toFixed(2)} (${slPct.toFixed(2)}%)</div></div>
       <div class="metric-box tgt"><div class="k">TARGET</div><div class="v">₹${target.toFixed(2)} (+${targetPct.toFixed(2)}%)</div></div>
@@ -1606,6 +1634,8 @@ function buildCard(sig, inWatch) {
       </div>
     </div>
   `;
+
+  // ... [Keep rest of the function] ...
 
   const addBtn = div.querySelector('.btn-add');
   const chartBtnEl = div.querySelector('[data-chart]');
