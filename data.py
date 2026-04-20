@@ -9,7 +9,6 @@ import time
 
 import pandas as pd
 import yfinance as yf
-from nsepython import nse_quote_ltp  # NEW: High-speed live data fetcher
 
 # ─────────────────────────────────────────────────────────────
 # INDEX DATA SOURCES
@@ -217,27 +216,43 @@ class BrokerRealtimeProvider(MarketDataProvider):
         # Use this provider specifically for micro-updates.
         return get_default_provider().get_ohlc(symbol, period, interval)
 
-
 def fetch_last_prices_nse(symbols: List[str]) -> Dict[str, float]:
     """
     High-speed Live Price Fetcher.
-    Uses nsepython to get real-time LTP directly from NSE.
+    Tries nsepython first, falls back to yfinance if NSE blocks the cloud IP.
     """
     out: Dict[str, float] = {}
     seen = set()
+    
     for raw in symbols[:30]:  # Cap at 30 to avoid rate limits
         clean = _clean_symbol(str(raw))
         if not clean or clean in seen:
             continue
         seen.add(clean)
+        
+        # 1. Try NSEPython (Super fast, but often blocked by Railway/Cloud firewalls)
         try:
-            # This fetches the true live price from NSE!
+            from nsepython import nse_quote_ltp
             ltp = nse_quote_ltp(clean)
             if ltp:
                 out[clean] = round(float(ltp), 2)
+                continue # Success! Skip the fallback and go to the next stock
+        except Exception:
+            pass # Blocked by NSE. Silently move to fallback.
+
+        # 2. Fallback to YFinance (Slight delay, but 100% reliable on Railway)
+        try:
+            ticker = _to_nse_ticker(clean)
+            t = yf.Ticker(ticker)
+            # Fetch last 5 days to ensure we get a price even on weekends/holidays
+            hist = t.history(period="5d", interval="1d") 
+            if hist is not None and not hist.empty and "Close" in hist.columns:
+                last = float(hist["Close"].iloc[-1])
+                out[clean] = round(last, 2)
         except Exception as e:
             print(f"[LIVE FETCH ERROR] for {clean}: {e}")
             continue
+            
     return out
 
 # ─────────────────────────────────────────────────────────────
