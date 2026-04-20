@@ -3,3 +3,4 @@ flask-sock
 yfinance
 pandas
 pandas-ta
+nsepython
