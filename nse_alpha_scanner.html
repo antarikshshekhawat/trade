@@ -216,7 +216,6 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
   background: var(--active);
   border-radius: 50%;
   box-shadow: 0 0 8px var(--active);
-  /* The pulsing animation gets attached/detached via JS for WebSockets */
 }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
@@ -402,7 +401,7 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
   font-size: 28px;
   font-weight: 800;
   color: #f8fafc;
-  padding: 0 4px; /* Padding helps the flash background look good */
+  padding: 0 4px;
   margin-left: -4px;
   border-radius: 6px;
   transition: color 0.3s ease;
@@ -523,9 +522,44 @@ body::before {
 .btn-hot-rail { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 10px; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #e0f2fe; border: 1px solid rgba(56, 189, 248, 0.35); background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(168, 85, 247, 0.12)); }
 .btn-hot-rail:hover { border-color: rgba(56, 189, 248, 0.6); }
 .btn-hot-rail.on { border-color: rgba(192, 132, 252, 0.55); box-shadow: 0 0 16px rgba(168, 85, 247, 0.2); }
-.sidebar-select { width: 100%; margin-top: 6px; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(59, 130, 246, 0.55); background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 55%, #1e40af 100%); color: #f8fafc; font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25); }
-.sidebar-select option { background: #1e3a8a; color: #f1f5f9; }
-.sidebar-select:focus { outline: none; border-color: rgba(147, 197, 253, 0.9); box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35); }
+
+/* ══════════════════════════════════════════════════════════════
+   UPDATED CUSTOM DROPDOWN SELECT STYLING
+═══════════════════════════════════════════════════════════════ */
+.sidebar-select {
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 14px;
+  border-radius: 12px; 
+  border: 1px solid rgba(67, 110, 255, 0.5);
+  background: linear-gradient(180deg, #2e5cff 0%, #1539d0 100%);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(21, 57, 208, 0.35);
+  appearance: none;
+  -webkit-appearance: none;
+  /* Custom white down arrow */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 14px;
+  padding-right: 36px;
+}
+.sidebar-select option {
+  background: #0f1523; /* Drops back to dark background for standard options */
+  color: #f8fafc;
+}
+.sidebar-select:focus {
+  outline: none;
+  border-color: rgba(147, 197, 253, 0.9);
+  box-shadow: 0 0 0 2px rgba(46, 92, 255, 0.4);
+}
+.sidebar-select:hover {
+  filter: brightness(1.08);
+}
+
 .filter-counts { margin-top: 8px; font-size: 10px; color: var(--text-muted); line-height: 1.45; padding: 0 4px; }
 .sector-rail-head { padding: 16px 16px 8px; border-bottom: 1px solid rgba(148, 163, 184, 0.1); }
 .sector-rail-title { font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; background: linear-gradient(90deg, #22d3ee, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
@@ -1087,7 +1121,7 @@ function getVisibleSignals() {
   if (currentView === 'watchlist') signals = signals.filter((s) => watchlist.has(s.ticker));
   if (currentCat !== 'all') signals = signals.filter((s) => (s.category || '').toLowerCase() === currentCat);
   
-  // NEW PRICE FILTER LOGIC
+  // PRICE FILTER LOGIC
   if (currentPriceFilter !== 'all') {
     signals = signals.filter((s) => {
       const p = s.price != null ? s.price : s.entry; 
