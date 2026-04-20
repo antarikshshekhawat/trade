@@ -84,7 +84,6 @@ def _load_index_symbols(url: str) -> List[str]:
 
     return []
 
-
 def load_all_nse_symbols() -> List[str]:
     """Load tradable NSE symbols for global ticker search (cached for 6h)."""
     now = time.time()
@@ -237,7 +236,6 @@ def fetch_last_prices_nse(symbols: List[str]) -> Dict[str, float]:
         except Exception:
             continue
     return out
-
 
 # ─────────────────────────────────────────────────────────────
 # DEFAULT PROVIDER
