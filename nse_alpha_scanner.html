@@ -103,18 +103,8 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
   color: #fff;
   box-shadow: 0 0 15px rgba(14, 165, 233, 0.4);
 }
-.brand-text {
-  font-weight: 800;
-  font-size: 15px;
-  letter-spacing: 0.5px;
-  line-height: 1.2;
-}
-.brand-sub {
-  font-size: 9px;
-  color: var(--text-muted);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
+.brand-text { font-weight: 800; font-size: 15px; letter-spacing: 0.5px; line-height: 1.2; }
+.brand-sub { font-size: 9px; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; }
 
 .sidebar-scroll {
   flex: 1;
@@ -125,43 +115,16 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
   gap: 24px;
 }
 
-.nav-section-title {
-  font-size: 10px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  margin-bottom: 12px;
-  padding-left: 12px;
-  font-weight: 600;
-}
+.nav-section-title { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; padding-left: 12px; font-weight: 600; }
 
 .nav-item {
-  display: flex;
-  align-items: center;
-  padding: 10px 12px;
-  border-radius: var(--radius);
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-dim);
-  cursor: pointer;
-  transition: all 0.2s;
-  margin-bottom: 4px;
-  gap: 10px;
+  display: flex; align-items: center; padding: 10px 12px; border-radius: var(--radius);
+  font-size: 13px; font-weight: 500; color: var(--text-dim); cursor: pointer; transition: all 0.2s; margin-bottom: 4px; gap: 10px;
 }
-.nav-item:hover {
-  background: var(--card);
-  color: var(--text);
-}
-.nav-item.active {
-  background: rgba(14, 165, 233, 0.1);
-  color: var(--text);
-  box-shadow: inset 3px 0 0 var(--all);
-}
+.nav-item:hover { background: var(--card); color: var(--text); }
+.nav-item.active { background: rgba(14, 165, 233, 0.1); color: var(--text); box-shadow: inset 3px 0 0 var(--all); }
+.nav-icon { font-size: 14px; width: 16px; text-align: center; }
 
-.nav-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-}
 .nav-count {
   margin-left: auto;
   font-family: var(--font-mono);
@@ -171,99 +134,26 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
   padding: 2px 8px;
   border-radius: 12px;
 }
-.nav-item.active .nav-count {
-  border-color: rgba(14, 165, 233, 0.3);
-}
-
-.nav-icon {
-  font-size: 14px;
-  width: 16px;
-  text-align: center;
-}
+.nav-item.active .nav-count { border-color: rgba(14, 165, 233, 0.3); }
 
 /* ══════════════════════════════════════════════════════════════
    MAIN AREA & TOPBAR
 ═══════════════════════════════════════════════════════════════ */
-#main-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--bg);
-}
+#main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+#topbar { height: var(--topbar-h); background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 24px; gap: 32px; }
 
-#topbar {
-  height: var(--topbar-h);
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  padding: 0 24px;
-  gap: 32px;
-}
-
-.live-indicator {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: var(--active);
-}
-.live-dot {
-  width: 8px; height: 8px;
-  background: var(--active);
-  border-radius: 50%;
-  box-shadow: 0 0 8px var(--active);
-}
+.live-indicator { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--active); }
+.live-dot { width: 8px; height: 8px; background: var(--active); border-radius: 50%; box-shadow: 0 0 8px var(--active); }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-.topbar-stats {
-  display: flex;
-  gap: 24px;
-}
-.stat-block {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.stat-label {
-  font-size: 9px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-weight: 600;
-}
-.stat-val {
-  font-family: var(--font-mono);
-  font-size: 16px;
-  font-weight: 800;
-}
+.topbar-stats { display: flex; gap: 24px; }
+.stat-block { display: flex; flex-direction: column; gap: 2px; }
+.stat-label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+.stat-val { font-family: var(--font-mono); font-size: 16px; font-weight: 800; }
 
-.topbar-right {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.clock {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--text-dim);
-}
-.btn-refresh {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  font-size: 12px;
-  font-weight: 600;
-  transition: all 0.2s;
-}
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 16px; }
+.clock { font-family: var(--font-mono); font-size: 12px; color: var(--text-dim); }
+.btn-refresh { display: flex; align-items: center; gap: 6px; padding: 8px 16px; background: transparent; border: 1px solid var(--border); border-radius: var(--radius); font-size: 12px; font-weight: 600; transition: all 0.2s; }
 .btn-refresh:hover { background: var(--card); border-color: var(--text-muted); }
 .btn-refresh.spinning svg { animation: spin 1s linear infinite; }
 @keyframes spin { 100% { transform: rotate(360deg); } }
@@ -271,58 +161,15 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 /* ══════════════════════════════════════════════════════════════
    CONTENT HEADER & SEARCH
 ═══════════════════════════════════════════════════════════════ */
-#content-header {
-  display: flex;
-  align-items: center;
-  padding: 20px 32px;
-  gap: 16px;
-}
+#content-header { display: flex; align-items: center; padding: 20px 32px; gap: 16px; }
+.page-title-wrap { display: flex; align-items: baseline; gap: 8px; }
+.page-title-num { font-size: 32px; font-weight: 800; font-family: var(--font-mono); color: var(--text); }
+.page-title-text { font-size: 14px; color: var(--text-muted); font-weight: 500; }
 
-.page-title-wrap {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-.page-title-num {
-  font-size: 32px;
-  font-weight: 800;
-  font-family: var(--font-mono);
-  color: var(--text);
-}
-.page-title-text {
-  font-size: 14px;
-  color: var(--text-muted);
-  font-weight: 500;
-}
+.cache-badge { background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: var(--ipo); font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 20px; letter-spacing: 0.5px; }
+.last-updated { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
 
-.cache-badge {
-  background: rgba(245, 158, 11, 0.15);
-  border: 1px solid rgba(245, 158, 11, 0.4);
-  color: var(--ipo);
-  font-size: 10px;
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 20px;
-  letter-spacing: 0.5px;
-}
-
-.last-updated {
-  font-size: 11px;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-}
-
-.search-container {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 8px 16px;
-  width: 260px;
-  gap: 10px;
-}
+.search-container { margin-left: auto; display: flex; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 16px; width: 300px; gap: 10px; }
 .search-container:focus-within { border-color: var(--large); }
 .search-container input { width: 100%; font-size: 13px; color: var(--text); }
 .search-container input::placeholder { color: var(--text-muted); }
@@ -331,35 +178,13 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 /* ══════════════════════════════════════════════════════════════
    CARDS GRID
 ═══════════════════════════════════════════════════════════════ */
-#cards-grid {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0 32px 32px 32px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 16px;
-  align-content: start;
-}
+#cards-grid { flex: 1; overflow-y: auto; padding: 0 32px 32px 32px; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; align-content: start; }
 
 /* ══════════════════════════════════════════════════════════════
    SIGNAL CARD
 ═══════════════════════════════════════════════════════════════ */
-.signal-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  position: relative;
-  transition: all 0.2s;
-  border-left: 3px solid var(--border); 
-}
-.signal-card:hover {
-  background: var(--card-hover);
-  border-color: var(--border-glow);
-}
+.signal-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; position: relative; transition: all 0.2s; border-left: 3px solid var(--border); }
+.signal-card:hover { background: var(--card-hover); border-color: var(--border-glow); }
 .signal-card.active-trade { border-left-color: var(--active); }
 .signal-card.candidate    { border-left-color: var(--all); }
 
@@ -378,34 +203,22 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .badge.status { background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.4); color: var(--active); }
 .badge.cat-wide { font-size: 8px; letter-spacing: 0.2px; padding: 4px 8px; line-height: 1.2; max-width: 168px; white-space: normal; text-align: left; }
 
-.btn-add { width: 24px; height: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; color: var(--text-dim); display: grid; place-items: center; font-size: 14px; transition: all 0.2s; }
+.btn-add { width: 24px; height: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; color: var(--text-dim); display: grid; place-items: center; font-size: 14px; transition: all 0.2s; cursor:pointer;}
 .btn-add:hover, .btn-add.saved { border-color: var(--all); color: var(--all); }
+.btn-remove-custom { width:24px; height:24px; border:1px solid var(--loss); color:var(--loss); border-radius:6px; background:none; cursor:pointer; font-weight:bold; transition: 0.2s; display: grid; place-items: center; }
+.btn-remove-custom:hover { background: rgba(239, 68, 68, 0.1); }
+.btn-chart { background:var(--surface); border:1px solid var(--border); color:var(--text); padding:4px 10px; border-radius:4px; font-size:10px; cursor:pointer; transition:all 0.2s; }
+.btn-chart:hover { border-color: var(--all); color: var(--all); }
 
 .c-row-3 { font-size: 11px; color: var(--text-muted); margin-top: -6px; }
-
 .c-row-4 { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 6px; width: 100%; }
 .c-row-4-main { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .c-chart-slot { margin-left: auto; flex-shrink: 0; padding-left: 28px; padding-right: 2px; }
 
 /* PRICE FLASHING ANIMATIONS FOR WEBSOCKET */
-@keyframes flashGreen {
-  0% { background-color: rgba(74, 222, 128, 0.5); transform: scale(1.02); }
-  100% { background-color: transparent; transform: scale(1); }
-}
-@keyframes flashRed {
-  0% { background-color: rgba(248, 113, 113, 0.5); transform: scale(1.02); }
-  100% { background-color: transparent; transform: scale(1); }
-}
-.c-price {
-  font-family: var(--font-mono);
-  font-size: 28px;
-  font-weight: 800;
-  color: #f8fafc;
-  padding: 0 4px;
-  margin-left: -4px;
-  border-radius: 6px;
-  transition: color 0.3s ease;
-}
+@keyframes flashGreen { 0% { background-color: rgba(74, 222, 128, 0.5); transform: scale(1.02); } 100% { background-color: transparent; transform: scale(1); } }
+@keyframes flashRed { 0% { background-color: rgba(248, 113, 113, 0.5); transform: scale(1.02); } 100% { background-color: transparent; transform: scale(1); } }
+.c-price { font-family: var(--font-mono); font-size: 28px; font-weight: 800; color: #f8fafc; padding: 0 4px; margin-left: -4px; border-radius: 6px; transition: color 0.3s ease; }
 .c-price.up { color: #4ade80; }
 .c-price.down { color: #f87171; }
 .c-price.flat { color: #f8fafc; }
@@ -419,13 +232,7 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .c-change { font-family: var(--font-mono); font-size: 12px; font-weight: 600; padding: 2px 6px; border-radius: 4px; background: rgba(148, 163, 184, 0.1); color: var(--text-dim); }
 
 /* CONFIDENCE SCORE WIDGET */
-.confidence-wrap {
-  margin-top: 6px;
-  padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(148, 163, 184, 0.1);
-  border-radius: 8px;
-}
+.confidence-wrap { margin-top: 6px; padding: 10px 12px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 8px; }
 .conf-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .conf-title { font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
 .conf-score { font-family: var(--font-mono); font-size: 14px; font-weight: 800; }
@@ -531,13 +338,13 @@ body::before {
   margin-top: 6px;
   padding: 10px 14px;
   border-radius: 12px; 
-  border: 1px solid rgba(67, 110, 255, 0.5);
-  background: linear-gradient(180deg, #2e5cff 0%, #1539d0 100%);
+  border: 1px solid rgba(14, 165, 233, 0.5);
+  background: linear-gradient(180deg, #38bdf8 0%, #0ea5e9 100%);
   color: #ffffff;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 15px rgba(21, 57, 208, 0.35);
+  box-shadow: 0 4px 15px rgba(14, 165, 233, 0.25);
   appearance: none;
   -webkit-appearance: none;
   /* Custom white down arrow */
@@ -553,11 +360,11 @@ body::before {
 }
 .sidebar-select:focus {
   outline: none;
-  border-color: rgba(147, 197, 253, 0.9);
-  box-shadow: 0 0 0 2px rgba(46, 92, 255, 0.4);
+  border-color: #fff;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
 }
 .sidebar-select:hover {
-  filter: brightness(1.08);
+  filter: brightness(1.1);
 }
 
 .filter-counts { margin-top: 8px; font-size: 10px; color: var(--text-muted); line-height: 1.45; padding: 0 4px; }
@@ -585,8 +392,7 @@ body::before {
 .metric-box.tgt .v { color: #4ade80; }
 .metric-box.lastclose .v { color: #38bdf8; }
 .metric-box.rr .v { color: #d8b4fe; }
-.chart-launch { padding: 5px 8px; border-radius: 7px; font-size: 10px; font-weight: 800; letter-spacing: 0.4px; color: #0b1220; background: linear-gradient(135deg, #67e8f9, #c084fc); box-shadow: 0 0 12px rgba(103, 232, 249, 0.22); }
-.chart-launch:hover { filter: brightness(1.08); }
+
 .risk-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 7px; }
 .risk-chip { font-size: 9px; font-weight: 700; padding: 6px 8px; border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.2); color: var(--text-dim); }
 .risk-chip.active { color: #0b1322; border-color: transparent; }
@@ -596,12 +402,15 @@ body::before {
 .swing-chip.good { color: #22c55e; border-color: rgba(34, 197, 94, 0.4); background: rgba(34, 197, 94, 0.1); }
 .swing-chip.ok { color: #f59e0b; border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.1); }
 .swing-chip.bad { color: #ef4444; border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.1); }
+
+/* Modals */
 .chart-modal { position: fixed; inset: 0; z-index: 9999; background: rgba(3, 6, 15, 0.8); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; padding: 24px; }
 .chart-modal.open { display: flex; }
 .chart-panel { width: min(1080px, 96vw); height: min(760px, 90vh); background: rgba(8, 12, 28, 0.96); border: 1px solid rgba(148, 163, 184, 0.25); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
 .chart-head { padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(148, 163, 184, 0.2); }
 .chart-title { font-size: 14px; font-weight: 700; letter-spacing: 0.04em; }
-.chart-close { border: 1px solid rgba(148, 163, 184, 0.4); border-radius: 8px; padding: 6px 10px; font-size: 12px; }
+.chart-close { border: 1px solid rgba(148, 163, 184, 0.4); border-radius: 8px; padding: 6px 10px; font-size: 12px; cursor: pointer; background: transparent; color: var(--text); }
+.chart-close:hover { background: rgba(255,255,255,0.1); }
 .chart-frame-wrap { flex: 1; }
 .chart-frame { width: 100%; height: 100%; border: 0; }
 </style>
@@ -661,6 +470,12 @@ body::before {
           <div class="nav-icon">⭐</div> High Priority
           <div class="nav-count" id="nav-count-watchlist" style="display:none">0</div>
         </div>
+        
+        <div class="nav-item" data-view="custom">
+          <div class="nav-icon">🎯</div> Custom Tracked
+          <div class="nav-count" id="nav-count-custom" style="display:none">0</div>
+        </div>
+
         <div class="nav-item" data-view="mytrades">
           <div class="nav-icon">✦</div> My trade book
         </div>
@@ -740,7 +555,7 @@ body::before {
       
       <div class="search-container">
         <span class="search-icon">🔍</span>
-        <input type="text" id="search-input" list="ticker-suggestions" placeholder="Search ticker..." autocomplete="off"/>
+        <input type="text" id="search-input" list="ticker-suggestions" placeholder="Search ticker (Press Enter to Track)..." autocomplete="off"/>
       </div>
       <datalist id="ticker-suggestions"></datalist>
     </div>
@@ -767,6 +582,7 @@ body::before {
 </div>
 
 <div id="toast"></div>
+
 <div class="chart-modal" id="chart-modal">
   <div class="chart-panel">
     <div class="chart-head">
@@ -775,6 +591,17 @@ body::before {
     </div>
     <div class="chart-frame-wrap">
       <iframe class="chart-frame" id="chart-frame" src="about:blank" loading="lazy"></iframe>
+    </div>
+  </div>
+</div>
+
+<div class="chart-modal" id="custom-prompt-modal">
+  <div class="chart-panel" style="width: 320px; height: auto; margin: auto; padding: 24px; text-align: center; border: 1px solid var(--all);">
+    <h3 style="margin-bottom: 8px; color: #fff;">Track Stock</h3>
+    <p id="custom-prompt-text" style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px;">Would you like to track this ticker?</p>
+    <div style="display: flex; gap: 12px; justify-content: center;">
+      <button id="btn-custom-yes" style="flex:1; background: linear-gradient(135deg, #38bdf8, #0ea5e9); color: #fff; padding: 10px; border-radius: 8px; font-weight: 700; border: none; cursor: pointer;">Yes, Track</button>
+      <button id="btn-custom-no" style="flex:1; background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 8px; font-weight: 600; cursor: pointer;">Cancel</button>
     </div>
   </div>
 </div>
@@ -793,8 +620,12 @@ let searchDebounce;
 const LS_WATCHLIST = 'nse_watchlist_v2';
 const LS_MY_TRADES = 'nse_my_trades_v1';
 
+// LOCAL STORAGE HELPERS
 const getWatchlist = () => new Set(JSON.parse(localStorage.getItem(LS_WATCHLIST) || '[]'));
 const saveWatchlist = (set) => localStorage.setItem(LS_WATCHLIST, JSON.stringify([...set]));
+
+const getCustomTracked = () => JSON.parse(localStorage.getItem('nse_custom_v1') || '[]');
+const saveCustomTracked = (arr) => localStorage.setItem('nse_custom_v1', JSON.stringify(arr));
 
 function getMyTrades() {
   try {
@@ -932,27 +763,26 @@ function renderMarketConditionPanel() {
   `;
 }
 
+// UPDATED: Now fetches quotes for BOTH My Trades and Custom Tracked
 async function refreshQuotesForTrades() {
-  const trades = getMyTrades();
-  if (!trades.length) {
+  const trades = getMyTrades().map(t => t.ticker);
+  const custom = getCustomTracked();
+  const allNeeded = [...new Set([...trades, ...custom])];
+
+  if (!allNeeded.length) {
     quoteMap = {};
     return;
   }
-  const tickers = [...new Set(trades.map(t => t.ticker))];
-  const missing = tickers.filter((t) => !allSignals.find((s) => s.ticker === t));
-  if (!missing.length) {
-    quoteMap = {};
-    return;
-  }
+  const missing = allNeeded.filter((t) => !allSignals.find((s) => s.ticker === t));
+  if (!missing.length) return;
+  
   try {
     const res = await fetch('/api/quotes?tickers=' + encodeURIComponent(missing.join(',')));
     if (res.ok) {
       const j = await res.json();
-      quoteMap = j.prices || {};
+      quoteMap = { ...quoteMap, ...(j.prices || {}) };
     }
-  } catch (e) {
-    quoteMap = {};
-  }
+  } catch (e) {}
 }
 
 function openChartModal(ticker) {
@@ -970,10 +800,6 @@ function closeChartModal() {
   const frame = document.getElementById('chart-frame');
   modal.classList.remove('open');
   frame.src = 'about:blank';
-}
-
-function chartButtonHtml(ticker) {
-  return `<button class="chart-launch" type="button" data-chart="${ticker}">Chart</button>`;
 }
 
 function categoryLabelFromKey(rawKey) {
@@ -1081,6 +907,14 @@ function updateDashboardStats(data) {
   const lastUpd = cs.last_updated ?? data.last_updated;
   document.getElementById('cache-badge').style.display = fromCache ? 'block' : 'none';
   document.getElementById('last-updated-text').textContent = lastUpd ? `Last updated: ${lastUpd}` : '';
+
+  // UPDATED: Set Custom Badge Counts
+  const custom = getCustomTracked();
+  const customEl = document.getElementById('nav-count-custom');
+  if (customEl) {
+      customEl.textContent = custom.length;
+      customEl.style.display = custom.length > 0 ? 'block' : 'none';
+  }
 }
 
 function renderMyTradesSidebar() {
@@ -1154,10 +988,10 @@ function renderGrid() {
   const grid = document.getElementById('cards-grid');
   const watchlist = getWatchlist();
 
+  // 1. My Trades View
   if (currentView === 'mytrades') {
     const trades = getMyTrades();
     document.getElementById('header-count').textContent = trades.length;
-    document.getElementById('nav-count-watchlist').textContent = watchlist.size;
     document.getElementById('nav-count-watchlist').style.display = watchlist.size > 0 ? 'block' : 'none';
     if (!trades.length) {
       grid.innerHTML = '<div class="state-message">Add a trade (ticker, entry, SL, target) in the sidebar.</div>';
@@ -1171,6 +1005,33 @@ function renderGrid() {
     return;
   }
 
+  // 2. NEW: Custom Tracked View
+  if (currentView === 'custom') {
+    const custom = getCustomTracked();
+    document.getElementById('header-count').textContent = custom.length;
+    document.getElementById('nav-count-watchlist').style.display = watchlist.size > 0 ? 'block' : 'none';
+    if (!custom.length) { 
+        grid.innerHTML = '<div class="state-message">No custom stocks tracked.<br><br>Search a ticker in the top right and press Enter to add.</div>'; 
+        return; 
+    }
+    grid.innerHTML = '';
+    custom.forEach(tkr => {
+      let sig = allSignals.find(s => s.ticker === tkr);
+      if (!sig) {
+          const ltp = quoteMap[tkr] || 0;
+          sig = {
+              ticker: tkr, pattern: 'Manually Tracked', price: ltp, entry: ltp, sl: ltp*0.95, target: ltp*1.05,
+              confidence_score: 50, confidence_reasons: ['User Added'], _isCustom: true, category: 'largecap'
+          };
+      } else {
+          sig = {...sig, _isCustom: true}; 
+      }
+      grid.appendChild(buildCard(sig, false));
+    });
+    return;
+  }
+
+  // 3. Standard Main Dashboard View
   const signals = getVisibleSignals();
   document.getElementById('header-count').textContent = signals.length;
 
@@ -1266,9 +1127,15 @@ function buildCard(sig, inWatch) {
     else statusBadge = '<span class="badge status">• TRACKING</span>';
   }
 
-  const wlBtn = sig._myTrade ? '' : `<button class="btn-add ${inWatch ? 'saved' : ''}" title="Toggle Watchlist">${inWatch ? '★' : '+'}</button>`;
-  const chartBtn = chartButtonHtml(sig.ticker);
-  const subLine = sig._myTrade ? `Fixed entry ₹${(sig.entry || 0).toFixed(2)} · live LTP (updates) · SL ₹${sl.toFixed(2)} · T ₹${target.toFixed(2)}` : '';
+  // Action Buttons Generation (Custom Remove vs Standard Star)
+  let actionBtnHtml = '';
+  if (sig._myTrade) {
+     actionBtnHtml = ''; // Trade book handles removal in sidebar
+  } else if (sig._isCustom) {
+     actionBtnHtml = `<button class="btn-remove-custom" title="Stop Tracking">✕</button>`;
+  } else {
+     actionBtnHtml = `<button class="btn-add ${inWatch ? 'saved' : ''}" title="Toggle Watchlist">${inWatch ? '★' : '+'}</button>`;
+  }
 
   div.innerHTML = `
     <div class="c-row-1">
@@ -1279,16 +1146,14 @@ function buildCard(sig, inWatch) {
       <div class="c-badges c-badges-cluster">
         <span class="badge ${badgeClass} cat-wide">${labelText}</span>
         ${statusBadge}
-        ${wlBtn}
       </div>
     </div>
-    ${sig._myTrade ? `<div class="c-row-3">${subLine}</div>` : ''}
+    ${sig._myTrade ? `<div class="c-row-3">Fixed entry ₹${(sig.entry || 0).toFixed(2)} · live LTP (updates) · SL ₹${sl.toFixed(2)} · T ₹${target.toFixed(2)}</div>` : ''}
     <div class="c-row-4">
       <div class="c-row-4-main">
         <div class="c-price ${priceDirClass}" data-ticker-price="${sig.ticker}">₹${priceStr}</div>
         <div class="c-change ${chClass}">${displayChangeStr}</div>
       </div>
-      <div class="c-chart-slot">${chartBtn}</div>
     </div>
     
     ${confidenceHtml}
@@ -1316,29 +1181,43 @@ function buildCard(sig, inWatch) {
         <div class="prog-fill target" style="width: ${tgtW}%"></div>
       </div>
     </div>
+    <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center;">
+       ${actionBtnHtml}
+       <button class="btn-chart" data-chart="${sig.ticker}">Chart</button>
+    </div>
   `;
 
+  // Attach specific listeners depending on view type
   const addBtn = div.querySelector('.btn-add');
-  const chartBtnEl = div.querySelector('[data-chart]');
+  if(addBtn) {
+    addBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const wl = getWatchlist();
+      if (wl.has(sig.ticker)) { wl.delete(sig.ticker); showToast(`${sig.ticker} removed`); } 
+      else { wl.add(sig.ticker); showToast(`${sig.ticker} saved ⭐`); }
+      saveWatchlist(wl); renderGrid(); updateStats();
+    });
+  }
+
+  const rmBtn = div.querySelector('.btn-remove-custom');
+  if(rmBtn) {
+    rmBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      let arr = getCustomTracked();
+      arr = arr.filter(t => t !== sig.ticker);
+      saveCustomTracked(arr);
+      renderGrid(); 
+      const cEl = document.getElementById('nav-count-custom');
+      if(cEl) { cEl.textContent = arr.length; cEl.style.display = arr.length > 0 ? 'block' : 'none'; }
+      showToast(`${sig.ticker} removed`);
+    });
+  }
+
+  const chartBtnEl = div.querySelector('.btn-chart');
   if (chartBtnEl) {
     chartBtnEl.addEventListener('click', (e) => {
       e.stopPropagation();
       openChartModal(sig.ticker);
-    });
-  }
-  if (addBtn) {
-    addBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const wl = getWatchlist();
-      if (wl.has(sig.ticker)) {
-        wl.delete(sig.ticker);
-        showToast(`${sig.ticker} removed`);
-      } else {
-        wl.add(sig.ticker);
-        showToast(`${sig.ticker} saved ⭐`);
-      }
-      saveWatchlist(wl);
-      renderGrid();
     });
   }
 
@@ -1427,17 +1306,17 @@ function connectWebSocket() {
   };
 }
 
-// Event Listeners
+// ══════════════════════════════════════════════════════════════
+//  EVENT LISTENERS & MENUS
+// ══════════════════════════════════════════════════════════════
+
 document.getElementById('filter-cat').addEventListener('change', (e) => {
   currentCat = e.target.value;
   currentView = 'all';
-  document.querySelectorAll('.nav-item[data-view]').forEach((x) => x.classList.remove('active'));
-  const allV = document.querySelector('.nav-item[data-view="all"]');
-  if (allV) allV.classList.add('active');
+  updateMenuUI();
   renderGrid();
 });
 
-// LISTEN FOR PRICE FILTER CHANGES
 document.getElementById('filter-price').addEventListener('change', (e) => {
   currentPriceFilter = e.target.value;
   renderGrid(); 
@@ -1448,21 +1327,71 @@ document.getElementById('filter-sort').addEventListener('change', (e) => {
   renderGrid();
 });
 
+function updateMenuUI() {
+    document.querySelectorAll('.nav-item[data-view]').forEach(x => x.classList.remove('active'));
+    const activeEl = document.querySelector(`.nav-item[data-view="${currentView}"]`);
+    if(activeEl) activeEl.classList.add('active');
+}
+
 document.querySelectorAll('.nav-item[data-view]').forEach((el) => {
   el.addEventListener('click', () => {
     currentView = el.dataset.view;
-    document.querySelectorAll('.nav-item[data-cat], .nav-item[data-view]').forEach((x) => x.classList.remove('active'));
-    el.classList.add('active');
+    updateMenuUI();
     renderGrid();
   });
 });
 
-document.getElementById('search-input').addEventListener('input', (e) => {
+// NEW: Search & Custom Tracking Modal Logic
+const searchInput = document.getElementById('search-input');
+const customModal = document.getElementById('custom-prompt-modal');
+let pendingSearchTicker = '';
+
+searchInput.addEventListener('input', (e) => {
   searchQuery = e.target.value.trim();
   clearTimeout(searchDebounce);
   searchDebounce = setTimeout(() => fetchTickerSuggestions(searchQuery), 180);
   renderGrid();
 });
+
+// Watch for "Enter" keypress in Search
+searchInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    const val = e.target.value.trim().toUpperCase();
+    if (val) {
+      pendingSearchTicker = val;
+      document.getElementById('custom-prompt-text').textContent = `Would you like to add ${val} to your Custom Tracked list?`;
+      customModal.classList.add('open');
+    }
+  }
+});
+
+// Modal Yes button
+document.getElementById('btn-custom-yes').onclick = async () => {
+    if (pendingSearchTicker) {
+        let arr = getCustomTracked();
+        if (!arr.includes(pendingSearchTicker)) {
+            arr.push(pendingSearchTicker);
+            saveCustomTracked(arr);
+            showToast(`${pendingSearchTicker} added to Custom Tracked`);
+            
+            // Immediately fetch live price
+            await refreshQuotesForTrades(); 
+            
+            // Snap the user over to their custom view
+            currentView = 'custom';
+            updateMenuUI();
+        }
+        searchInput.value = '';
+        searchQuery = '';
+        renderGrid();
+        const customEl = document.getElementById('nav-count-custom');
+        if(customEl) { customEl.textContent = arr.length; customEl.style.display = arr.length > 0 ? 'block' : 'none'; }
+    }
+    customModal.classList.remove('open');
+};
+
+// Modal Cancel button
+document.getElementById('btn-custom-no').onclick = () => { customModal.classList.remove('open'); };
 
 document.getElementById('btn-refresh').addEventListener('click', () => triggerRefresh());
 
