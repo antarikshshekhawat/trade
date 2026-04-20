@@ -599,6 +599,16 @@ body::before {
       </div>
 
       <div>
+        <div class="nav-section-title">Price Range</div>
+        <select id="filter-price" class="sidebar-select" aria-label="Filter by price">
+          <option value="all">Any Price</option>
+          <option value="under500">Under ₹500</option>
+          <option value="under1000">Under ₹1000</option>
+          <option value="over1000">Over ₹1000</option>
+        </select>
+      </div>
+
+      <div>
         <div class="nav-section-title">Sort by</div>
         <select id="filter-sort" class="sidebar-select" aria-label="Sort signals">
           <option value="score">Best score</option>
@@ -739,6 +749,7 @@ body::before {
 /* STATE */
 let allSignals = [];
 let currentCat = 'all';
+let currentPriceFilter = 'all'; 
 let currentSort = 'score';
 let currentView = 'all';
 let searchQuery = '';
@@ -849,7 +860,7 @@ async function fetchTickerSuggestions(query) {
     const options = (data.tickers || []).slice(0, 50).map((tk) => `<option value="${tk}"></option>`).join('');
     document.getElementById('ticker-suggestions').innerHTML = options;
   } catch (e) {
-    // no-op: suggestions are best effort only
+    // no-op
   }
 }
 
@@ -1025,6 +1036,7 @@ function updateDashboardStats(data) {
   if (fc) fc.textContent = `All ${c.all ?? allSignals.length} · Large ${c.largecap ?? 0} · Mid ${c.midcap ?? 0} · Small ${c.smallcap ?? 0} · IPO ${c.ipo ?? 0}`;
   
   document.getElementById('filter-cat').value = currentCat;
+  document.getElementById('filter-price').value = currentPriceFilter; 
   document.getElementById('filter-sort').value = currentSort;
   const swing = computeSwingStatus();
   updateSwingChip(swing.label, swing.cls);
@@ -1074,6 +1086,18 @@ function getVisibleSignals() {
 
   if (currentView === 'watchlist') signals = signals.filter((s) => watchlist.has(s.ticker));
   if (currentCat !== 'all') signals = signals.filter((s) => (s.category || '').toLowerCase() === currentCat);
+  
+  // NEW PRICE FILTER LOGIC
+  if (currentPriceFilter !== 'all') {
+    signals = signals.filter((s) => {
+      const p = s.price != null ? s.price : s.entry; 
+      if (currentPriceFilter === 'under500') return p < 500;
+      if (currentPriceFilter === 'under1000') return p < 1000;
+      if (currentPriceFilter === 'over1000') return p >= 1000;
+      return true;
+    });
+  }
+
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
     signals = signals.filter((s) => s.ticker.toLowerCase().includes(q) || (s.pattern || '').toLowerCase().includes(q));
@@ -1153,7 +1177,7 @@ function buildCard(sig, inWatch) {
   const lowRiskHighReward = Boolean(sig.risk_bucket_low_high) || (riskPct <= 3.0 && rrNum >= 2.0);
   const highRiskHighReward = Boolean(sig.risk_bucket_high_high) || (riskPct > 3.0 && rrNum >= 2.0);
 
-  // NEW CONFIDENCE LOGIC
+  // CONFIDENCE LOGIC
   const confScore = Number(sig.confidence_score !== undefined ? sig.confidence_score : 50).toFixed(0);
   const reasons = sig.confidence_reasons || [];
   let scoreColor = 'low';
@@ -1334,8 +1358,7 @@ function connectWebSocket() {
                 allSignals[sigIndex].price = newPrice;
             }
 
-            // Target the DOM elements directly to apply the flash animations
-            // This prevents us from having to wipe/rebuild the whole UI every second
+            // Update DOM Elements without redrawing whole grid
             const priceEls = document.querySelectorAll(`[data-ticker-price="${ticker}"]`);
             priceEls.forEach(el => {
                 el.textContent = '₹' + newPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -1370,7 +1393,6 @@ function connectWebSocket() {
   };
 }
 
-
 // Event Listeners
 document.getElementById('filter-cat').addEventListener('change', (e) => {
   currentCat = e.target.value;
@@ -1379,6 +1401,12 @@ document.getElementById('filter-cat').addEventListener('change', (e) => {
   const allV = document.querySelector('.nav-item[data-view="all"]');
   if (allV) allV.classList.add('active');
   renderGrid();
+});
+
+// LISTEN FOR PRICE FILTER CHANGES
+document.getElementById('filter-price').addEventListener('change', (e) => {
+  currentPriceFilter = e.target.value;
+  renderGrid(); 
 });
 
 document.getElementById('filter-sort').addEventListener('change', (e) => {
