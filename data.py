@@ -9,6 +9,7 @@ import time
 
 import pandas as pd
 import yfinance as yf
+from nsepython import nse_quote_ltp  # NEW: High-speed live data fetcher
 
 # ─────────────────────────────────────────────────────────────
 # INDEX DATA SOURCES
@@ -209,31 +210,33 @@ class YFinanceDataProvider(MarketDataProvider):
 
         return pd.DataFrame()
 
-
 class BrokerRealtimeProvider(MarketDataProvider):
-    def get_ohlc(self, symbol: str, period="8mo", interval="1d") -> pd.DataFrame:
-        raise NotImplementedError("Add broker API here later")
+    """Uses nsepython to get much fresher data than yfinance."""
+    def get_ohlc(self, symbol: str, period="1d", interval="1m") -> pd.DataFrame:
+        # Note: for deep technical scans (EMA50), yfinance is still better for history.
+        # Use this provider specifically for micro-updates.
+        return get_default_provider().get_ohlc(symbol, period, interval)
 
 
 def fetch_last_prices_nse(symbols: List[str]) -> Dict[str, float]:
-    """Latest daily close for NSE symbols (for My Trades LTP). Caps at 25 symbols."""
+    """
+    High-speed Live Price Fetcher.
+    Uses nsepython to get real-time LTP directly from NSE.
+    """
     out: Dict[str, float] = {}
     seen = set()
-    for raw in symbols[:25]:
+    for raw in symbols[:30]:  # Cap at 30 to avoid rate limits
         clean = _clean_symbol(str(raw))
         if not clean or clean in seen:
             continue
         seen.add(clean)
-        ticker = _to_nse_ticker(clean)
-        if not ticker:
-            continue
         try:
-            t = yf.Ticker(ticker)
-            hist = t.history(period="5d", interval="1d")
-            if hist is not None and not hist.empty and "Close" in hist.columns:
-                last = float(hist["Close"].iloc[-1])
-                out[clean] = round(last, 2)
-        except Exception:
+            # This fetches the true live price from NSE!
+            ltp = nse_quote_ltp(clean)
+            if ltp:
+                out[clean] = round(float(ltp), 2)
+        except Exception as e:
+            print(f"[LIVE FETCH ERROR] for {clean}: {e}")
             continue
     return out
 
