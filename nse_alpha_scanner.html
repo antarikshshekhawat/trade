@@ -1880,6 +1880,21 @@ body::before {
 
 .chart-frame { width: 100%; height: 100%; border: 0; }
 
+   @keyframes flashGreen {
+  0% { background-color: rgba(74, 222, 128, 0.4); }
+  100% { background-color: transparent; }
+}
+@keyframes flashRed {
+  0% { background-color: rgba(248, 113, 113, 0.4); }
+  100% { background-color: transparent; }
+}
+
+.c-price {
+  transition: color 0.3s;
+}
+.price-flash-up { animation: flashGreen 0.8s ease-out; border-radius: 4px; }
+.price-flash-down { animation: flashRed 0.8s ease-out; border-radius: 4px; }
+
 </style>
 
 </head>
@@ -3424,16 +3439,87 @@ document.getElementById('btn-add-trade').addEventListener('click', () => {
 
 
 
-setInterval(fullRefresh, REFRESH_MS);
+// ==========================================
+// ALPHA V3: REAL-TIME WEBSOCKET CONNECTION
+// ==========================================
+let ws;
+let reconnectTimer;
 
+function connectWebSocket() {
+  // Change the port/URL depending on your Python backend setup (FastAPI/Flask)
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${wsProtocol}//${window.location.host}/ws/stream`; 
+  
+  ws = new WebSocket(wsUrl);
 
+  ws.onopen = () => {
+    console.log("🟢 Live Signal Stream Connected");
+    showToast("Live Stream Connected");
+    
+    // Make the live dot pulse faster to indicate true streaming
+    const liveDot = document.querySelector('.live-dot');
+    if (liveDot) liveDot.style.animation = 'pulse 1s infinite';
+    
+    // Do one initial full load to populate the dashboard immediately
+    fullRefresh();
+  };
 
+  ws.onmessage = (event) => {
+    try {
+      const message = JSON.parse(event.data);
+
+      // Handle different types of incoming live data
+      if (message.type === 'full_scan') {
+        // Full dashboard update (e.g., every minute)
+        if (message.data && message.data.signals) {
+          allSignals = message.data.signals;
+          renderGrid();
+        }
+      } 
+      else if (message.type === 'tick_update') {
+        // Micro-update: Just update prices/RSI without rebuilding the whole grid
+        const updates = message.data; // e.g., { "RELIANCE": 2950.40, "TCS": 3920.10 }
+        
+        // Update local memory
+        Object.keys(updates).forEach(ticker => {
+            quoteMap[ticker] = updates[ticker];
+            
+            // Find if this signal exists in our current array and update its price
+            let sigIndex = allSignals.findIndex(s => s.ticker === ticker);
+            if (sigIndex !== -1) {
+                allSignals[sigIndex].price = updates[ticker];
+            }
+        });
+        
+        // Re-render to show flashing prices
+        renderGrid();
+      }
+      
+    } catch (err) {
+      console.error("Error parsing live data:", err);
+    }
+  };
+
+  ws.onclose = () => {
+    console.warn("🔴 Live Stream Disconnected. Attempting reconnect in 5s...");
+    const liveDot = document.querySelector('.live-dot');
+    if (liveDot) liveDot.style.animation = 'none'; // Stop pulsing
+    
+    clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(connectWebSocket, 5000);
+  };
+
+  ws.onerror = (err) => {
+    console.error("WebSocket Error:", err);
+    ws.close(); // Force close to trigger the reconnect logic
+  };
+}
+
+// Boot up the system
 (async () => {
-
-  await fullRefresh();
-
+  await fetchSectors(); // Load static layout data first
+  connectWebSocket();   // Ignite the live stream
 })();
-
 </script>
 
 </body>
