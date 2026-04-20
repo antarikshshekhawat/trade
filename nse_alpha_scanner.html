@@ -11,9 +11,9 @@
    DESIGN TOKENS & CYBERPUNK THEME
 ═══════════════════════════════════════════════════════════════ */
 :root {
-  --bg:         #05080f; /* Deep dark blue/black */
-  --surface:    #0b101a; /* Sidebar/Topbar bg */
-  --card:       #0f1523; /* Card bg */
+  --bg:         #05080f; 
+  --surface:    #0b101a; 
+  --card:       #0f1523; 
   --card-hover: #151d2e;
   --border:     #1e293b;
   --border-glow:#2dd4bf33;
@@ -22,14 +22,14 @@
   --text-dim:   #94a3b8;
   --text-muted: #64748b;
 
-  --all:        #0ea5e9; /* Light blue */
-  --large:      #3b82f6; /* Blue */
-  --mid:        #d946ef; /* Magenta */
-  --small:      #10b981; /* Green */
-  --ipo:        #f59e0b; /* Yellow/Orange */
+  --all:        #0ea5e9; 
+  --large:      #3b82f6; 
+  --mid:        #d946ef; 
+  --small:      #10b981; 
+  --ipo:        #f59e0b; 
   
-  --active:     #10b981; /* Green for Active/Profit */
-  --loss:       #ef4444; /* Red for Stop Loss */
+  --active:     #10b981; 
+  --loss:       #ef4444; 
 
   --font-mono:  'JetBrains Mono', monospace;
   --font-sans:  'Inter', sans-serif;
@@ -39,20 +39,9 @@
   --radius:     8px;
 }
 
-/* ══════════════════════════════════════════════════════════════
-   RESET & BASE
-═══════════════════════════════════════════════════════════════ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { height: 100%; }
-body {
-  height: 100%;
-  font-family: var(--font-sans);
-  background: var(--bg);
-  color: var(--text);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
+body { height: 100%; font-family: var(--font-sans); background: var(--bg); color: var(--text); overflow: hidden; display: flex; flex-direction: column; }
 button { cursor: pointer; border: none; background: none; font: inherit; color: inherit; }
 input { font: inherit; color: inherit; background: none; border: none; outline: none; }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -62,82 +51,39 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 /* ══════════════════════════════════════════════════════════════
    LAYOUT
 ═══════════════════════════════════════════════════════════════ */
-#app-container {
-  display: flex;
-  height: 100vh;
-  width: 100vw;
-  overflow: hidden;
-}
+#app-container { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
 
-/* ══════════════════════════════════════════════════════════════
-   SIDEBAR
-═══════════════════════════════════════════════════════════════ */
-#sidebar {
-  width: var(--sidebar-w);
-  min-width: var(--sidebar-w);
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  padding: 0;
-  z-index: 10;
-}
-
-.brand {
-  height: var(--topbar-h);
-  display: flex;
-  align-items: center;
-  padding: 0 20px;
-  gap: 12px;
-  border-bottom: 1px solid var(--border);
-}
-.brand-icon {
-  width: 32px; height: 32px;
-  background: var(--all);
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  font-family: var(--font-mono);
-  font-weight: 800;
-  font-size: 16px;
-  color: #fff;
-  box-shadow: 0 0 15px rgba(14, 165, 233, 0.4);
-}
+#sidebar { width: var(--sidebar-w); min-width: var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 0; z-index: 10; }
+.brand { height: var(--topbar-h); display: flex; align-items: center; padding: 0 20px; gap: 12px; border-bottom: 1px solid var(--border); }
+.brand-icon { width: 32px; height: 32px; background: var(--all); border-radius: 8px; display: grid; place-items: center; font-family: var(--font-mono); font-weight: 800; font-size: 16px; color: #fff; box-shadow: 0 0 15px rgba(14, 165, 233, 0.4); }
 .brand-text { font-weight: 800; font-size: 15px; letter-spacing: 0.5px; line-height: 1.2; }
 .brand-sub { font-size: 9px; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; }
 
-.sidebar-scroll {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
+.sidebar-scroll { flex: 1; overflow-y: auto; padding: 20px 16px; display: flex; flex-direction: column; gap: 24px; }
 .nav-section-title { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; padding-left: 12px; font-weight: 600; }
 
-.nav-item {
-  display: flex; align-items: center; padding: 10px 12px; border-radius: var(--radius);
-  font-size: 13px; font-weight: 500; color: var(--text-dim); cursor: pointer; transition: all 0.2s; margin-bottom: 4px; gap: 10px;
+.sidebar-select {
+  width: 100%; margin-top: 6px; padding: 10px 14px; border-radius: 12px; 
+  border: 1px solid rgba(14, 165, 233, 0.5); background: linear-gradient(180deg, #38bdf8 0%, #0ea5e9 100%);
+  color: #ffffff; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(14, 165, 233, 0.25);
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center; background-size: 14px; padding-right: 36px;
 }
+.sidebar-select option { background: #0f1523; color: #f8fafc; }
+.sidebar-select:focus { outline: none; border-color: #fff; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2); }
+.sidebar-select:hover { filter: brightness(1.1); }
+
+.nav-item { display: flex; align-items: center; padding: 10px 12px; border-radius: var(--radius); font-size: 13px; font-weight: 500; color: var(--text-dim); cursor: pointer; transition: all 0.2s; margin-bottom: 4px; gap: 10px; }
 .nav-item:hover { background: var(--card); color: var(--text); }
 .nav-item.active { background: rgba(14, 165, 233, 0.1); color: var(--text); box-shadow: inset 3px 0 0 var(--all); }
 .nav-icon { font-size: 14px; width: 16px; text-align: center; }
 
-.nav-count {
-  margin-left: auto;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  padding: 2px 8px;
-  border-radius: 12px;
-}
+.nav-count { margin-left: auto; font-family: var(--font-mono); font-size: 11px; background: var(--card); border: 1px solid var(--border); padding: 2px 8px; border-radius: 12px; }
 .nav-item.active .nav-count { border-color: rgba(14, 165, 233, 0.3); }
 
 /* ══════════════════════════════════════════════════════════════
-   MAIN AREA & TOPBAR
+   MAIN AREA
 ═══════════════════════════════════════════════════════════════ */
 #main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
 #topbar { height: var(--topbar-h); background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 24px; gap: 32px; }
@@ -158,14 +104,10 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .btn-refresh.spinning svg { animation: spin 1s linear infinite; }
 @keyframes spin { 100% { transform: rotate(360deg); } }
 
-/* ══════════════════════════════════════════════════════════════
-   CONTENT HEADER & SEARCH
-═══════════════════════════════════════════════════════════════ */
 #content-header { display: flex; align-items: center; padding: 20px 32px; gap: 16px; }
 .page-title-wrap { display: flex; align-items: baseline; gap: 8px; }
 .page-title-num { font-size: 32px; font-weight: 800; font-family: var(--font-mono); color: var(--text); }
 .page-title-text { font-size: 14px; color: var(--text-muted); font-weight: 500; }
-
 .cache-badge { background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: var(--ipo); font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 20px; letter-spacing: 0.5px; }
 .last-updated { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
 
@@ -176,13 +118,10 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .search-icon { color: var(--all); font-size: 14px; }
 
 /* ══════════════════════════════════════════════════════════════
-   CARDS GRID
+   CARDS GRID & SIGNAL CARDS
 ═══════════════════════════════════════════════════════════════ */
 #cards-grid { flex: 1; overflow-y: auto; padding: 0 32px 32px 32px; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; align-content: start; }
 
-/* ══════════════════════════════════════════════════════════════
-   SIGNAL CARD
-═══════════════════════════════════════════════════════════════ */
 .signal-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; position: relative; transition: all 0.2s; border-left: 3px solid var(--border); }
 .signal-card:hover { background: var(--card-hover); border-color: var(--border-glow); }
 .signal-card.active-trade { border-left-color: var(--active); }
@@ -205,17 +144,17 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 
 .btn-add { width: 24px; height: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; color: var(--text-dim); display: grid; place-items: center; font-size: 14px; transition: all 0.2s; cursor:pointer;}
 .btn-add:hover, .btn-add.saved { border-color: var(--all); color: var(--all); }
-.btn-remove-custom { width:24px; height:24px; border:1px solid var(--loss); color:var(--loss); border-radius:6px; background:none; cursor:pointer; font-weight:bold; transition: 0.2s; display: grid; place-items: center; }
-.btn-remove-custom:hover { background: rgba(239, 68, 68, 0.1); }
-.btn-chart { background:var(--surface); border:1px solid var(--border); color:var(--text); padding:4px 10px; border-radius:4px; font-size:10px; cursor:pointer; transition:all 0.2s; }
-.btn-chart:hover { border-color: var(--all); color: var(--all); }
+
+.btn-remove-custom { width: 24px; height: 24px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; color: var(--loss); display: grid; place-items: center; font-size: 14px; transition: all 0.2s; cursor: pointer; }
+.btn-remove-custom:hover { background: var(--loss); color: #fff; }
 
 .c-row-3 { font-size: 11px; color: var(--text-muted); margin-top: -6px; }
 .c-row-4 { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 6px; width: 100%; }
 .c-row-4-main { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .c-chart-slot { margin-left: auto; flex-shrink: 0; padding-left: 28px; padding-right: 2px; }
+.chart-launch { padding: 5px 8px; border-radius: 7px; font-size: 10px; font-weight: 800; letter-spacing: 0.4px; color: #0b1220; background: linear-gradient(135deg, #67e8f9, #c084fc); box-shadow: 0 0 12px rgba(103, 232, 249, 0.22); border: none; cursor: pointer; }
+.chart-launch:hover { filter: brightness(1.08); }
 
-/* PRICE FLASHING ANIMATIONS FOR WEBSOCKET */
 @keyframes flashGreen { 0% { background-color: rgba(74, 222, 128, 0.5); transform: scale(1.02); } 100% { background-color: transparent; transform: scale(1); } }
 @keyframes flashRed { 0% { background-color: rgba(248, 113, 113, 0.5); transform: scale(1.02); } 100% { background-color: transparent; transform: scale(1); } }
 .c-price { font-family: var(--font-mono); font-size: 28px; font-weight: 800; color: #f8fafc; padding: 0 4px; margin-left: -4px; border-radius: 6px; transition: color 0.3s ease; }
@@ -231,7 +170,6 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .c-change.flat { color: #f8fafc !important; }
 .c-change { font-family: var(--font-mono); font-size: 12px; font-weight: 600; padding: 2px 6px; border-radius: 4px; background: rgba(148, 163, 184, 0.1); color: var(--text-dim); }
 
-/* CONFIDENCE SCORE WIDGET */
 .confidence-wrap { margin-top: 6px; padding: 10px 12px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 8px; }
 .conf-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .conf-title { font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
@@ -244,7 +182,26 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .conf-reasons { font-size: 9px; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
 .conf-reason-pill { background: rgba(148, 163, 184, 0.1); padding: 3px 6px; border-radius: 4px; color: #e2e8f0; }
 
-/* Progress Bar */
+.c-metrics-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
+.metric-box { padding: 7px 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(148, 163, 184, 0.12); }
+.metric-box .k { font-size: 8px; color: var(--text-muted); letter-spacing: 0.8px; }
+.metric-box .v { margin-top: 2px; font-family: var(--font-mono); font-size: 11px; font-weight: 700; }
+.metric-box.entry .v { color: #fde047; }
+.metric-box.slstop .v { color: #f87171; }
+.metric-box.tgt .v { color: #4ade80; }
+.metric-box.lastclose .v { color: #38bdf8; }
+.metric-box.rr .v { color: #d8b4fe; }
+
+.risk-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 7px; }
+.risk-chip { font-size: 9px; font-weight: 700; padding: 6px 8px; border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.2); color: var(--text-dim); }
+.risk-chip.active { color: #0b1322; border-color: transparent; }
+.risk-chip.low.active { background: linear-gradient(135deg, #4ade80, #22d3ee); }
+.risk-chip.high.active { background: linear-gradient(135deg, #fb7185, #f97316); color: #fff; }
+.swing-chip { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 999px; border: 1px solid rgba(148, 163, 184, 0.25); }
+.swing-chip.good { color: #22c55e; border-color: rgba(34, 197, 94, 0.4); background: rgba(34, 197, 94, 0.1); }
+.swing-chip.ok { color: #f59e0b; border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.1); }
+.swing-chip.bad { color: #ef4444; border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.1); }
+
 .c-row-5 { margin-top: auto; padding-top: 12px; }
 .prog-labels { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 9px; margin-bottom: 6px; }
 .prog-labels span:last-child { text-align: right; }
@@ -256,56 +213,12 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .prog-fill.target { background: #22c55e; right: 0; width: 70%; }
 .prog-marker { position: absolute; top: -2px; width: 4px; height: 8px; background: #fff; border-radius: 2px; left: 30%; z-index: 2; }
 
-/* Loading/Empty State */
 .state-message { grid-column: 1/-1; text-align: center; padding: 100px 0; color: var(--text-muted); font-size: 14px; }
 .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--all); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px auto; }
 
-/* Toast */
 #toast { position: fixed; bottom: 24px; right: 24px; background: var(--card); border: 1px solid var(--border); padding: 12px 20px; border-radius: var(--radius); font-size: 13px; z-index: 1000; display: none; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
 #toast.show { display: block; animation: slideUp 0.3s ease; }
 @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-/* ═══ ALPHA V2 — neon glass, sector rail, my trades ═══ */
-:root {
-  --font-display: 'Outfit', var(--font-sans);
-  --glow-cyan: rgba(34, 211, 238, 0.45);
-  --glow-violet: rgba(167, 139, 250, 0.5);
-  --rail-w: 300px;
-  --sidebar-w: 260px;
-}
-html { background: #06060f; }
-body {
-  font-family: var(--font-display);
-  background:
-    radial-gradient(ellipse 120% 80% at 20% -10%, rgba(99, 102, 241, 0.25), transparent 50%),
-    radial-gradient(ellipse 80% 50% at 100% 0%, rgba(34, 211, 238, 0.12), transparent 45%),
-    linear-gradient(180deg, #070712 0%, #0a0a18 40%, #050508 100%);
-  overflow: hidden;
-}
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
-  background-size: 48px 48px;
-  pointer-events: none;
-  z-index: 0;
-  mask-image: radial-gradient(ellipse 90% 70% at 50% 30%, black 20%, transparent 75%);
-}
-#app-container { position: relative; z-index: 1; }
-#main-area { min-width: 0; }
-.brand-text { font-family: var(--font-display); letter-spacing: -0.02em; }
-.brand-icon { background: linear-gradient(135deg, #22d3ee, #a855f7); box-shadow: 0 0 24px var(--glow-cyan), inset 0 1px 0 rgba(255,255,255,0.2); }
-#sidebar, #topbar, #sector-rail { background: rgba(12, 14, 28, 0.72); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-color: rgba(148, 163, 184, 0.12); }
-.signal-card { background: rgba(15, 18, 35, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(148, 163, 184, 0.15); box-shadow: 0 4px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255,255,255,0.04); border-radius: 14px; }
-.signal-card:hover { border-color: rgba(34, 211, 238, 0.35); box-shadow: 0 8px 40px rgba(34, 211, 238, 0.08); }
-.nav-item.active { background: linear-gradient(90deg, rgba(34, 211, 238, 0.12), transparent); box-shadow: inset 3px 0 0 #22d3ee; }
-.market-card { margin: 0 16px 12px; padding: 14px; border-radius: 12px; background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.92)); border: 1px solid rgba(148, 163, 184, 0.18); }
-.market-card .label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
-.market-card .value { margin-top: 6px; font-size: 16px; font-weight: 800; }
-.market-card .reason { margin-top: 8px; font-size: 11px; color: var(--text-dim); line-height: 1.45; }
 
 /* My trades form */
 .my-trade-form { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
@@ -329,45 +242,6 @@ body::before {
 .btn-hot-rail { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 10px; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #e0f2fe; border: 1px solid rgba(56, 189, 248, 0.35); background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(168, 85, 247, 0.12)); }
 .btn-hot-rail:hover { border-color: rgba(56, 189, 248, 0.6); }
 .btn-hot-rail.on { border-color: rgba(192, 132, 252, 0.55); box-shadow: 0 0 16px rgba(168, 85, 247, 0.2); }
-
-/* ══════════════════════════════════════════════════════════════
-   UPDATED CUSTOM DROPDOWN SELECT STYLING
-═══════════════════════════════════════════════════════════════ */
-.sidebar-select {
-  width: 100%;
-  margin-top: 6px;
-  padding: 10px 14px;
-  border-radius: 12px; 
-  border: 1px solid rgba(14, 165, 233, 0.5);
-  background: linear-gradient(180deg, #38bdf8 0%, #0ea5e9 100%);
-  color: #ffffff;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 4px 15px rgba(14, 165, 233, 0.25);
-  appearance: none;
-  -webkit-appearance: none;
-  /* Custom white down arrow */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 14px center;
-  background-size: 14px;
-  padding-right: 36px;
-}
-.sidebar-select option {
-  background: #0f1523; /* Drops back to dark background for standard options */
-  color: #f8fafc;
-}
-.sidebar-select:focus {
-  outline: none;
-  border-color: #fff;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
-}
-.sidebar-select:hover {
-  filter: brightness(1.1);
-}
-
-.filter-counts { margin-top: 8px; font-size: 10px; color: var(--text-muted); line-height: 1.45; padding: 0 4px; }
 .sector-rail-head { padding: 16px 16px 8px; border-bottom: 1px solid rgba(148, 163, 184, 0.1); }
 .sector-rail-title { font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; background: linear-gradient(90deg, #22d3ee, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 .hot-sector-card { margin: 12px 16px; padding: 14px; border-radius: 12px; background: linear-gradient(135deg, rgba(34, 211, 238, 0.15), rgba(168, 85, 247, 0.12)); border: 1px solid rgba(34, 211, 238, 0.35); box-shadow: 0 0 40px rgba(34, 211, 238, 0.12); }
@@ -383,25 +257,6 @@ body::before {
 .sector-row .sp.up { color: #4ade80; }
 .sector-row .sp.down { color: #f87171; }
 .sector-empty { padding: 24px; font-size: 12px; color: var(--text-muted); text-align: center; }
-.c-metrics-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
-.metric-box { padding: 7px 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(148, 163, 184, 0.12); }
-.metric-box .k { font-size: 8px; color: var(--text-muted); letter-spacing: 0.8px; }
-.metric-box .v { margin-top: 2px; font-family: var(--font-mono); font-size: 11px; font-weight: 700; }
-.metric-box.entry .v { color: #fde047; }
-.metric-box.slstop .v { color: #f87171; }
-.metric-box.tgt .v { color: #4ade80; }
-.metric-box.lastclose .v { color: #38bdf8; }
-.metric-box.rr .v { color: #d8b4fe; }
-
-.risk-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 7px; }
-.risk-chip { font-size: 9px; font-weight: 700; padding: 6px 8px; border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.2); color: var(--text-dim); }
-.risk-chip.active { color: #0b1322; border-color: transparent; }
-.risk-chip.low.active { background: linear-gradient(135deg, #4ade80, #22d3ee); }
-.risk-chip.high.active { background: linear-gradient(135deg, #fb7185, #f97316); color: #fff; }
-.swing-chip { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 999px; border: 1px solid rgba(148, 163, 184, 0.25); }
-.swing-chip.good { color: #22c55e; border-color: rgba(34, 197, 94, 0.4); background: rgba(34, 197, 94, 0.1); }
-.swing-chip.ok { color: #f59e0b; border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.1); }
-.swing-chip.bad { color: #ef4444; border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.1); }
 
 /* Modals */
 .chart-modal { position: fixed; inset: 0; z-index: 9999; background: rgba(3, 6, 15, 0.8); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; padding: 24px; }
@@ -506,30 +361,12 @@ body::before {
       </div>
       
       <div class="topbar-stats">
-        <div class="stat-block">
-          <span class="stat-label">Signals</span>
-          <span class="stat-val" style="color: var(--text)" id="top-val-all">—</span>
-        </div>
-        <div class="stat-block">
-          <span class="stat-label" style="color: var(--large)">Large Cap</span>
-          <span class="stat-val" style="color: var(--large)" id="top-val-large">—</span>
-        </div>
-        <div class="stat-block">
-          <span class="stat-label" style="color: var(--mid)">Mid Cap</span>
-          <span class="stat-val" style="color: var(--mid)" id="top-val-mid">—</span>
-        </div>
-        <div class="stat-block">
-          <span class="stat-label" style="color: var(--small)">Small Cap</span>
-          <span class="stat-val" style="color: var(--small)" id="top-val-small">—</span>
-        </div>
-        <div class="stat-block">
-          <span class="stat-label" style="color: var(--ipo)">IPO</span>
-          <span class="stat-val" style="color: var(--ipo)" id="top-val-ipo">—</span>
-        </div>
-        <div class="stat-block">
-          <span class="stat-label">Swing Market</span>
-          <span class="swing-chip ok" id="swing-chip">WAIT</span>
-        </div>
+        <div class="stat-block"><span class="stat-label">Signals</span><span class="stat-val" style="color: var(--text)" id="top-val-all">—</span></div>
+        <div class="stat-block"><span class="stat-label" style="color: var(--large)">Large Cap</span><span class="stat-val" style="color: var(--large)" id="top-val-large">—</span></div>
+        <div class="stat-block"><span class="stat-label" style="color: var(--mid)">Mid Cap</span><span class="stat-val" style="color: var(--mid)" id="top-val-mid">—</span></div>
+        <div class="stat-block"><span class="stat-label" style="color: var(--small)">Small Cap</span><span class="stat-val" style="color: var(--small)" id="top-val-small">—</span></div>
+        <div class="stat-block"><span class="stat-label" style="color: var(--ipo)">IPO</span><span class="stat-val" style="color: var(--ipo)" id="top-val-ipo">—</span></div>
+        <div class="stat-block"><span class="stat-label">Swing Market</span><span class="swing-chip ok" id="swing-chip">WAIT</span></div>
       </div>
 
       <div class="topbar-right">
@@ -724,9 +561,7 @@ async function fetchTickerSuggestions(query) {
     const data = await res.json();
     const options = (data.tickers || []).slice(0, 50).map((tk) => `<option value="${tk}"></option>`).join('');
     document.getElementById('ticker-suggestions').innerHTML = options;
-  } catch (e) {
-    // no-op
-  }
+  } catch (e) {}
 }
 
 function renderSectorRail(d) {
@@ -763,16 +598,15 @@ function renderMarketConditionPanel() {
   `;
 }
 
-// UPDATED: Now fetches quotes for BOTH My Trades and Custom Tracked
+// FETCH LATEST QUOTES (Used for My Trades & Custom Tracked)
 async function refreshQuotesForTrades() {
   const trades = getMyTrades().map(t => t.ticker);
   const custom = getCustomTracked();
   const allNeeded = [...new Set([...trades, ...custom])];
 
-  if (!allNeeded.length) {
-    quoteMap = {};
-    return;
-  }
+  if (!allNeeded.length) return;
+  
+  // Only fetch ones we don't already have live in allSignals
   const missing = allNeeded.filter((t) => !allSignals.find((s) => s.ticker === t));
   if (!missing.length) return;
   
@@ -780,10 +614,23 @@ async function refreshQuotesForTrades() {
     const res = await fetch('/api/quotes?tickers=' + encodeURIComponent(missing.join(',')));
     if (res.ok) {
       const j = await res.json();
-      quoteMap = { ...quoteMap, ...(j.prices || {}) };
+      let updated = false;
+      Object.keys(j.prices || {}).forEach(t => {
+          if (quoteMap[t] !== j.prices[t]) {
+              quoteMap[t] = j.prices[t];
+              updated = true;
+          }
+      });
+      // If we got new prices and the user is looking at them, instantly refresh the grid
+      if (updated && (currentView === 'custom' || currentView === 'mytrades')) {
+          renderGrid(); 
+      }
     }
   } catch (e) {}
 }
+
+// Background poller so Custom Tracked stocks keep getting price updates
+setInterval(refreshQuotesForTrades, 6000);
 
 function openChartModal(ticker) {
   const modal = document.getElementById('chart-modal');
@@ -908,7 +755,6 @@ function updateDashboardStats(data) {
   document.getElementById('cache-badge').style.display = fromCache ? 'block' : 'none';
   document.getElementById('last-updated-text').textContent = lastUpd ? `Last updated: ${lastUpd}` : '';
 
-  // UPDATED: Set Custom Badge Counts
   const custom = getCustomTracked();
   const customEl = document.getElementById('nav-count-custom');
   if (customEl) {
@@ -955,7 +801,6 @@ function getVisibleSignals() {
   if (currentView === 'watchlist') signals = signals.filter((s) => watchlist.has(s.ticker));
   if (currentCat !== 'all') signals = signals.filter((s) => (s.category || '').toLowerCase() === currentCat);
   
-  // PRICE FILTER LOGIC
   if (currentPriceFilter !== 'all') {
     signals = signals.filter((s) => {
       const p = s.price != null ? s.price : s.entry; 
@@ -1005,7 +850,7 @@ function renderGrid() {
     return;
   }
 
-  // 2. NEW: Custom Tracked View
+  // 2. Custom Tracked View
   if (currentView === 'custom') {
     const custom = getCustomTracked();
     document.getElementById('header-count').textContent = custom.length;
@@ -1127,15 +972,17 @@ function buildCard(sig, inWatch) {
     else statusBadge = '<span class="badge status">• TRACKING</span>';
   }
 
-  // Action Buttons Generation (Custom Remove vs Standard Star)
+  // Proper Button Generation (Restoring the correct layout!)
   let actionBtnHtml = '';
   if (sig._myTrade) {
-     actionBtnHtml = ''; // Trade book handles removal in sidebar
+     actionBtnHtml = ''; 
   } else if (sig._isCustom) {
      actionBtnHtml = `<button class="btn-remove-custom" title="Stop Tracking">✕</button>`;
   } else {
      actionBtnHtml = `<button class="btn-add ${inWatch ? 'saved' : ''}" title="Toggle Watchlist">${inWatch ? '★' : '+'}</button>`;
   }
+
+  const chartBtnHtml = `<button class="chart-launch" type="button" data-chart="${sig.ticker}">Chart</button>`;
 
   div.innerHTML = `
     <div class="c-row-1">
@@ -1146,6 +993,7 @@ function buildCard(sig, inWatch) {
       <div class="c-badges c-badges-cluster">
         <span class="badge ${badgeClass} cat-wide">${labelText}</span>
         ${statusBadge}
+        ${actionBtnHtml}
       </div>
     </div>
     ${sig._myTrade ? `<div class="c-row-3">Fixed entry ₹${(sig.entry || 0).toFixed(2)} · live LTP (updates) · SL ₹${sl.toFixed(2)} · T ₹${target.toFixed(2)}</div>` : ''}
@@ -1154,6 +1002,7 @@ function buildCard(sig, inWatch) {
         <div class="c-price ${priceDirClass}" data-ticker-price="${sig.ticker}">₹${priceStr}</div>
         <div class="c-change ${chClass}">${displayChangeStr}</div>
       </div>
+      <div class="c-chart-slot">${chartBtnHtml}</div>
     </div>
     
     ${confidenceHtml}
@@ -1180,10 +1029,6 @@ function buildCard(sig, inWatch) {
         <div class="prog-marker" style="left: ${entryPct}%"></div>
         <div class="prog-fill target" style="width: ${tgtW}%"></div>
       </div>
-    </div>
-    <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center;">
-       ${actionBtnHtml}
-       <button class="btn-chart" data-chart="${sig.ticker}">Chart</button>
     </div>
   `;
 
@@ -1213,7 +1058,7 @@ function buildCard(sig, inWatch) {
     });
   }
 
-  const chartBtnEl = div.querySelector('.btn-chart');
+  const chartBtnEl = div.querySelector('.chart-launch');
   if (chartBtnEl) {
     chartBtnEl.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1341,7 +1186,7 @@ document.querySelectorAll('.nav-item[data-view]').forEach((el) => {
   });
 });
 
-// NEW: Search & Custom Tracking Modal Logic
+// Search & Custom Tracking Modal Logic
 const searchInput = document.getElementById('search-input');
 const customModal = document.getElementById('custom-prompt-modal');
 let pendingSearchTicker = '';
@@ -1374,7 +1219,7 @@ document.getElementById('btn-custom-yes').onclick = async () => {
             saveCustomTracked(arr);
             showToast(`${pendingSearchTicker} added to Custom Tracked`);
             
-            // Immediately fetch live price
+            // Instantly trigger a background fetch for this new stock
             await refreshQuotesForTrades(); 
             
             // Snap the user over to their custom view
