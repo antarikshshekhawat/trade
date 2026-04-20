@@ -245,5 +245,3 @@ def fetch_last_prices_nse(symbols: List[str]) -> Dict[str, float]:
 
 def get_default_provider() -> MarketDataProvider:
     return YFinanceDataProvider()
-
-this is data.py
