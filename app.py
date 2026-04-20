@@ -405,11 +405,11 @@ def health():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# WEBSOCKET STREAMING ROUTE
+# WEBSOCKET STREAMING ROUTE (REAL-TIME NSE DATA)
 # ─────────────────────────────────────────────────────────────────────────────
 @sock.route('/ws/stream')
 def stream_prices(ws):
-    print("🟢 Client connected to live stream")
+    print("🟢 Client connected to REAL live stream")
     
     # 1. Fetch the latest signals (either live, in-memory, or from disk cache)
     payload = _get_signals_cached()
@@ -428,36 +428,35 @@ def stream_prices(ws):
         "data": {"signals": normalized}
     }))
     
-    # 3. Create a local memory map of prices for the simulator
+    # 3. Create a local memory map of prices
     local_quotes = {sig['ticker']: sig.get('price', sig.get('entry', 100.0)) for sig in normalized}
     
     time.sleep(1) # Tiny pause before starting the tick loop
     
-    # 4. Infinite loop to push fake "live" price changes to the UI
+    # 4. Infinite loop to push REAL NSE price changes to the UI
     while True:
         try:
-            tick_updates = {}
             if local_quotes:
                 active_tickers = list(local_quotes.keys())
-                # Update up to 8 random stocks per second
-                for _ in range(min(8, len(active_tickers))):
-                    tkr = random.choice(active_tickers)
-                    current_price = local_quotes[tkr]
-                    
-                    # Create a realistic micro-tick (-0.15% to +0.15%)
-                    change_pct = random.uniform(-0.0015, 0.0015)
-                    new_price = round(current_price * (1 + change_pct), 2)
-                    
-                    local_quotes[tkr] = new_price
-                    tick_updates[tkr] = new_price
+                
+                # Sample 15 random stocks at a time to prevent hitting NSE rate limits
+                sample_tickers = random.sample(active_tickers, min(15, len(active_tickers)))
+                
+                # Fetch fresh real-time data from NSE using the new data.py function
+                fresh_updates = fetch_last_prices_nse(sample_tickers)
+                
+                if fresh_updates:
+                    # Update our local memory map
+                    for tkr, new_price in fresh_updates.items():
+                        local_quotes[tkr] = new_price
+                        
+                    ws.send(json.dumps({
+                        "type": "tick_update",
+                        "data": fresh_updates
+                    }))
             
-            if tick_updates:
-                ws.send(json.dumps({
-                    "type": "tick_update",
-                    "data": tick_updates
-                }))
-            
-            time.sleep(1) # Send a new batch of ticks every 1 second
+            # Wait 3 seconds between fetches to stay under the radar of NSE firewalls
+            time.sleep(3)
             
         except Exception as e:
             print(f"🔴 Client disconnected from stream: {e}")
