@@ -66,7 +66,7 @@ body::before {
 .brand-text, .c-ticker-top, .page-title-text, .hot-sector-card .name, .chart-title, h3 {
     font-family: 'Outfit', sans-serif !important;
 }
-.c-price, .c-change, .metric-box .v, .conf-score, .prog-labels, .topbar-stats .stat-val, .page-title-num, .clock, .nav-count, .hot-sector-card .pct, .sector-row .sp, .last-updated {
+.c-price, .c-change, .metric-box .v, .prog-labels, .topbar-stats .stat-val, .page-title-num, .clock, .nav-count, .hot-sector-card .pct, .sector-row .sp, .last-updated {
     font-family: 'JetBrains Mono', monospace !important;
 }
 
@@ -193,6 +193,7 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .badge.small { background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); color: var(--small); }
 .badge.ipo   { background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.3); color: var(--ipo); }
 .badge.status { background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.4); color: var(--active); }
+.badge.cat-wide { font-size: 8px; letter-spacing: 0.2px; padding: 4px 8px; line-height: 1.2; max-width: 168px; white-space: normal; text-align: left; }
 
 .btn-add { width: 24px; height: 24px; background: rgba(255,255,255,0.05); border: 1px solid rgba(148,163,184,0.2); border-radius: 6px; color: var(--text-dim); display: grid; place-items: center; font-size: 14px; transition: all 0.2s; cursor:pointer;}
 .btn-add:hover, .btn-add.saved { border-color: var(--all); color: var(--all); }
@@ -218,19 +219,9 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .c-change.up { color: #4ade80 !important; }
 .c-change.down { color: #f87171 !important; }
 
-.confidence-wrap { margin-top: 6px; padding: 10px 12px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 8px; }
-.conf-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-.conf-title { font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; font-family: 'Inter', sans-serif;}
-.conf-score { font-size: 14px; font-weight: 800; }
-.conf-score.high { color: #4ade80; text-shadow: 0 0 10px rgba(74, 222, 128, 0.3); }
-.conf-score.med { color: #facc15; }
-.conf-score.low { color: #f87171; }
-.conf-bar-bg { height: 3px; background: rgba(0,0,0,0.4); border-radius: 2px; overflow: hidden; margin-bottom: 8px; }
-.conf-bar-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, #3b82f6, #22d3ee); transition: width 0.5s ease-out; }
-.conf-reasons { font-size: 9px; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 5px; align-items: center; font-family: 'Inter', sans-serif;}
-.conf-reason-pill { background: rgba(148, 163, 184, 0.1); padding: 3px 6px; border-radius: 4px; color: #e2e8f0; }
+/* REPLACED: Confidence Widget section completely removed here */
 
-.c-metrics-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
+.c-metrics-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 14px; } /* Added slight margin top to compensate for removed confidence bar */
 .metric-box { padding: 7px 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(148, 163, 184, 0.12); }
 .metric-box .k { font-size: 8px; color: var(--text-muted); letter-spacing: 0.8px; font-family: 'Inter', sans-serif;}
 .metric-box .v { margin-top: 2px; font-size: 11px; font-weight: 700; }
@@ -242,10 +233,15 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .metric-box:nth-child(5) .v { color: #d8b4fe; }
 
 .risk-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 7px; }
-.risk-chip { font-size: 9px; font-weight: 700; padding: 6px 4px; border-radius: 6px; border: 1px solid rgba(148, 163, 184, 0.2); color: var(--text-dim); text-align: center; font-family: 'Inter', sans-serif;}
+.risk-chip { font-size: 9px; font-weight: 700; padding: 6px 4px; border-radius: 6px; border: 1px solid rgba(148, 163, 184, 0.2); color: var(--text-dim); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: 'Inter', sans-serif;}
 .risk-chip.active { color: #0b1322; border-color: transparent; }
 .risk-chip.low.active { background: linear-gradient(135deg, #4ade80, #22d3ee); }
 .risk-chip.high.active { background: linear-gradient(135deg, #fb7185, #f97316); color: #fff; }
+
+.swing-chip { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 999px; border: 1px solid rgba(148, 163, 184, 0.25); font-family: 'Inter', sans-serif;}
+.swing-chip.good { color: #22c55e; border-color: rgba(34, 197, 94, 0.4); background: rgba(34, 197, 94, 0.1); }
+.swing-chip.ok { color: #f59e0b; border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.1); }
+.swing-chip.bad { color: #ef4444; border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.1); }
 
 .c-row-5 { margin-top: auto; padding-top: 12px; }
 .prog-labels { display: flex; justify-content: space-between; font-size: 9px; margin-bottom: 6px; }
@@ -260,70 +256,34 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .state-message { grid-column: 1/-1; text-align: center; padding: 100px 0; color: var(--text-muted); font-size: 14px; }
 .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--all); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px auto; }
 
-/* ══════════════════════════════════════════════════════════════
-   SECTOR RAIL (COMPLETELY OVERHAULED & CRAZY)
-═══════════════════════════════════════════════════════════════ */
-#sector-rail { 
-    width: 0; min-width: 0; opacity: 0; display: flex; flex-direction: column; z-index: 10;
-    background: rgba(12, 14, 28, 0.85); backdrop-filter: blur(24px); 
-    border-left: 1px solid rgba(34, 211, 238, 0.2);
-    transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), min-width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease;
-    white-space: nowrap; overflow-x: hidden;
-}
-#sector-rail.rail-open { width: var(--rail-w); min-width: var(--rail-w); opacity: 1; }
+/* Sector rail */
+#sector-rail { width: var(--rail-w); min-width: var(--rail-w); background: rgba(12, 14, 28, 0.72); backdrop-filter: blur(16px); border-left: 1px solid rgba(148, 163, 184, 0.12); display: none; flex-direction: column; z-index: 10; }
+#sector-rail.rail-open { display: flex; }
+.btn-hot-rail { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 10px; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #e0f2fe; border: 1px solid rgba(56, 189, 248, 0.35); background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(168, 85, 247, 0.12)); font-family: 'Inter', sans-serif;}
+.btn-hot-rail.on { border-color: rgba(192, 132, 252, 0.55); box-shadow: 0 0 16px rgba(168, 85, 247, 0.2); }
+.sector-rail-head { padding: 16px 16px 8px; border-bottom: 1px solid rgba(148, 163, 184, 0.1); display: flex; justify-content: space-between; align-items: center; }
+.sector-rail-title { font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; background: linear-gradient(90deg, #22d3ee, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-family: 'Inter', sans-serif;}
+.hot-sector-card { margin: 12px 16px; padding: 14px; border-radius: 12px; background: linear-gradient(135deg, rgba(34, 211, 238, 0.15), rgba(168, 85, 247, 0.12)); border: 1px solid rgba(34, 211, 238, 0.35); box-shadow: 0 0 40px rgba(34, 211, 238, 0.12); }
+.hot-sector-card .label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-family: 'Inter', sans-serif;}
+.hot-sector-card .name { font-size: 16px; font-weight: 800; margin-top: 4px; }
+.hot-sector-card .pct { font-size: 22px; font-weight: 800; margin-top: 8px; }
+.hot-sector-card .pct.up { color: #4ade80; }
+.hot-sector-card .pct.down { color: #f87171; }
+#sector-list { flex: 1; overflow-y: auto; padding: 8px 12px 24px; }
+.sector-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; margin-bottom: 6px; border-radius: 10px; background: rgba(255,255,255,0.02); border: 1px solid rgba(148, 163, 184, 0.08); font-size: 12px; font-family: 'Inter', sans-serif;}
+.sector-row .sp { font-weight: 700; font-size: 12px; }
+.sector-row .sp.up { color: #4ade80; }
+.sector-row .sp.down { color: #f87171; }
+.sector-empty { padding: 24px; font-size: 12px; color: var(--text-muted); text-align: center; }
 
-.btn-hot-rail { 
-    display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #e0f2fe; 
-    border: 1px solid rgba(56, 189, 248, 0.35); background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(168, 85, 247, 0.12)); 
-    font-family: 'Inter', sans-serif !important; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.btn-hot-rail:active { transform: scale(0.9); }
-.btn-hot-rail.on { animation: buttonNeonPulse 2s infinite alternate; }
-@keyframes buttonNeonPulse {
-    0% { box-shadow: 0 0 10px rgba(168, 85, 247, 0.2); border-color: rgba(192, 132, 252, 0.5); }
-    100% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.6), 0 0 10px rgba(34, 211, 238, 0.4); border-color: rgba(216, 180, 254, 0.9); }
-}
-
-.sector-rail-head { padding: 20px 20px 10px; border-bottom: 1px solid rgba(34, 211, 238, 0.15); display: flex; justify-content: space-between; align-items: center; }
-.sector-rail-title { font-size: 14px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; background: linear-gradient(90deg, #22d3ee, #c084fc, #f472b6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-family: 'Outfit', sans-serif !important;}
-
-/* Premium Leading Sector Card */
-.hot-sector-card { margin: 16px; padding: 18px; border-radius: 14px; background: linear-gradient(135deg, rgba(34, 211, 238, 0.1), rgba(168, 85, 247, 0.15)); border: 1px solid rgba(34, 211, 238, 0.5); box-shadow: 0 0 30px rgba(34, 211, 238, 0.15), inset 0 0 20px rgba(168, 85, 247, 0.1); }
-.hot-sector-card .label { font-size: 10px; color: #7dd3fc; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; font-family: 'Inter', sans-serif;}
-.hot-sector-card .name { font-size: 20px; font-weight: 800; margin-top: 6px; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.3); font-family: 'Outfit', sans-serif !important;}
-.hot-sector-card .pct { font-size: 28px; font-weight: 800; margin-top: 10px; font-family: 'JetBrains Mono', monospace !important; letter-spacing: -1px;}
-.hot-sector-card .pct.up { color: #4ade80; text-shadow: 0 0 20px rgba(74, 222, 128, 0.5); }
-.hot-sector-card .pct.down { color: #f87171; text-shadow: 0 0 20px rgba(248, 113, 113, 0.5); }
-
-/* Premium Market Conditions Box */
-.market-card { margin: 0 16px 16px; padding: 18px; border-radius: 14px; background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.9)); border: 1px solid rgba(168, 85, 247, 0.3); box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
-.market-card .label { font-size: 10px; color: #c084fc; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; font-family: 'Inter', sans-serif;}
-.market-card .value { margin-top: 8px; font-size: 16px; font-weight: 800; font-family: 'Outfit', sans-serif !important; letter-spacing: 0.5px;}
-.market-card .reason { margin-top: 10px; font-size: 12px; color: var(--text-dim); line-height: 1.5; white-space: normal; font-family: 'Inter', sans-serif;}
-
-/* Interactive Sector List */
-#sector-list { flex: 1; overflow-y: auto; padding: 0 16px 24px; display: flex; flex-direction: column; gap: 8px;}
-.sector-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-radius: 10px; background: rgba(15, 23, 35, 0.6); border: 1px solid rgba(148, 163, 184, 0.15); font-size: 14px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: default;}
-.sector-row:hover { background: rgba(34, 211, 238, 0.08); border-color: rgba(34, 211, 238, 0.4); box-shadow: 0 0 15px rgba(34, 211, 238, 0.2); transform: translateX(-4px); }
-.sector-row .sn { font-weight: 700; color: #f1f5f9; font-family: 'Outfit', sans-serif !important; letter-spacing: 0.5px;}
-.sector-row .sp { font-family: 'JetBrains Mono', monospace !important; font-weight: 800; font-size: 14px; }
-.sector-row .sp.up { color: #4ade80; text-shadow: 0 0 8px rgba(74, 222, 128, 0.4); }
-.sector-row .sp.down { color: #f87171; text-shadow: 0 0 8px rgba(248, 113, 113, 0.4); }
-.sector-empty { padding: 24px; font-size: 13px; color: var(--text-muted); text-align: center; }
-
-/* ══════════════════════════════════════════════════════════════
-   MY TRADES FORM
-═══════════════════════════════════════════════════════════════ */
-.my-trade-form { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; font-family: 'Inter', sans-serif;}
-.my-trade-form input { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.2); background: rgba(0,0,0,0.25); font-size: 12px; transition: border-color 0.3s; font-family: 'Inter', sans-serif;}
-.my-trade-form input:focus { border-color: var(--all); box-shadow: 0 0 8px rgba(14, 165, 233, 0.3); }
-.btn-add-trade { padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; background: linear-gradient(135deg, #22d3ee, #6366f1); color: #0a0a12; border: none; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-family: 'Inter', sans-serif;}
-.btn-add-trade:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(34, 211, 238, 0.3); }
-.btn-add-trade:active { transform: scale(0.95); }
-
-#my-trades-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; max-height: 220px; overflow-y: auto; font-family: 'Inter', sans-serif;}
-.my-trade-row { font-size: 11px; padding: 10px; border-radius: 10px; background: rgba(0,0,0,0.2); border: 1px solid rgba(148, 163, 184, 0.12); position: relative; transition: all 0.2s; }
-.my-trade-row:hover { background: rgba(255,255,255,0.05); }
+/* My trades form */
+.my-trade-form { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.my-trade-form input { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.2); background: rgba(0,0,0,0.25); font-size: 12px; font-family: 'Inter', sans-serif; }
+.my-trade-form input:focus { border-color: rgba(34, 211, 238, 0.5); }
+.btn-add-trade { padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; background: linear-gradient(135deg, #22d3ee, #6366f1); color: #0a0a12; border: none; cursor: pointer; font-family: 'Inter', sans-serif;}
+.btn-add-trade:hover { filter: brightness(1.08); }
+#my-trades-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; max-height: 220px; overflow-y: auto; font-family: 'Inter', sans-serif; }
+.my-trade-row { font-size: 11px; padding: 10px; border-radius: 10px; background: rgba(0,0,0,0.2); border: 1px solid rgba(148, 163, 184, 0.12); position: relative; }
 .my-trade-row .t-name { font-weight: 800; font-size: 12px; letter-spacing: 0.04em; }
 .my-trade-row .t-line { color: var(--text-muted); margin-top: 4px; font-family: 'JetBrains Mono', monospace !important; }
 .my-trade-row .t-status { position: absolute; top: 8px; right: 8px; font-size: 9px; font-weight: 800; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; font-family: 'Inter', sans-serif;}
@@ -331,25 +291,21 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .st-tg { color: #4ade80; border: 1px solid rgba(74,222,128,0.4); background: rgba(74,222,128,0.1); }
 .st-sl { color: #f87171; border: 1px solid rgba(248,113,113,0.4); background: rgba(248,113,113,0.1); }
 .btn-del-trade { margin-top: 6px; font-size: 10px; color: var(--text-muted); text-decoration: underline; cursor: pointer; background: none; border: none; padding: 0; }
-.btn-del-trade:hover { color: var(--loss); }
 
-/* ══════════════════════════════════════════════════════════════
-   MODALS & TOASTS
-═══════════════════════════════════════════════════════════════ */
-.chart-modal { position: fixed; inset: 0; z-index: 9999; background: rgba(3, 6, 15, 0.8); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; padding: 24px; font-family: 'Inter', sans-serif;}
-.chart-modal.open { display: flex; animation: modalFadeIn 0.3s ease; }
-@keyframes modalFadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-
-.chart-panel { width: min(1080px, 96vw); height: min(760px, 90vh); background: rgba(8, 12, 28, 0.96); border: 1px solid rgba(148, 163, 184, 0.25); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
+/* Modals */
+.chart-modal { position: fixed; inset: 0; z-index: 9999; background: rgba(3, 6, 15, 0.8); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; padding: 24px; }
+.chart-modal.open { display: flex; }
+.chart-panel { width: min(1080px, 96vw); height: min(760px, 90vh); background: rgba(8, 12, 28, 0.96); border: 1px solid rgba(148, 163, 184, 0.25); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
 .chart-head { padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(148, 163, 184, 0.2); }
-.chart-close { border: 1px solid rgba(148, 163, 184, 0.4); border-radius: 8px; padding: 6px 10px; font-size: 12px; cursor: pointer; background: transparent; color: var(--text); transition: background 0.2s; font-family: 'Inter', sans-serif;}
+.chart-title { font-size: 14px; font-weight: 700; letter-spacing: 0.04em; }
+.chart-close { border: 1px solid rgba(148, 163, 184, 0.4); border-radius: 8px; padding: 6px 10px; font-size: 12px; cursor: pointer; background: transparent; color: var(--text); font-family: 'Inter', sans-serif;}
 .chart-close:hover { background: rgba(255,255,255,0.1); }
 .chart-frame-wrap { flex: 1; }
 .chart-frame { width: 100%; height: 100%; border: 0; }
 
-#toast { position: fixed; bottom: 24px; right: 24px; background: rgba(15, 18, 35, 0.95); border: 1px solid var(--all); padding: 14px 24px; border-radius: var(--radius); font-size: 13px; z-index: 1000; display: none; box-shadow: 0 10px 30px rgba(14, 165, 233, 0.3); font-weight: 600; font-family: 'Inter', sans-serif;}
-#toast.show { display: block; animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-@keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+#toast { position: fixed; bottom: 24px; right: 24px; background: rgba(15, 18, 35, 0.9); border: 1px solid var(--border); padding: 12px 20px; border-radius: var(--radius); font-size: 13px; z-index: 1000; display: none; box-shadow: 0 10px 25px rgba(0,0,0,0.5); font-family: 'Inter', sans-serif; }
+#toast.show { display: block; animation: slideUp 0.3s ease; }
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
 /* ══════════════════════════════════════════════════════════════
    MOBILE RESPONSIVENESS
@@ -367,14 +323,17 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
   .search-container-wrapper { width: 100%; }
   
   #cards-grid { padding: 0 16px 32px 16px; grid-template-columns: 1fr; }
+  .c-ticker-top { font-size: 16px; }
   
+  /* Prevent text breaking inside metrics box on mobile */
   .c-metrics-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .metric-box { padding: 8px 6px; overflow: hidden; }
   .metric-box .v { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   
+  /* Slide-out Sidebar Logic */
   #sidebar {
     position: fixed; left: 0; top: 0; bottom: 0;
-    transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
     will-change: transform; z-index: 1001;
   }
   #sidebar.open { transform: translateX(0); }
@@ -383,17 +342,15 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
   .sidebar-overlay.open { display: block; animation: fadeOverlay 0.3s ease; }
   @keyframes fadeOverlay { from { opacity: 0; } to { opacity: 1; } }
   
+  /* Sector Rail Mobile */
   #sector-rail { 
     position: fixed; right: 0; top: 0; bottom: 0; z-index: 1001; 
-    width: var(--rail-w); min-width: var(--rail-w);
     box-shadow: -20px 0 50px rgba(0,0,0,0.5); 
-    transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-    will-change: transform; display: flex !important; opacity: 1;
+    transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    will-change: transform; display: flex !important; 
   }
   #sector-rail.rail-open { transform: translateX(0); }
-  
   .mobile-close-sector { display: block !important; background: transparent; border: none; color: #f8fafc; font-size: 20px; padding: 4px 12px; cursor: pointer; font-weight: bold; font-family: 'Inter', sans-serif !important;}
-  .mobile-close-sector:active { transform: scale(0.85); }
 }
 </style>
 </head>
@@ -722,7 +679,6 @@ function updateDashboardStats(data) {
   allSignals.forEach((s) => { const cat = (s.category || '').toLowerCase(); if (cat in derived) derived[cat]++; });
   const c = { ...derived, ...(data.counts || {}) };
   
-  // FIX: Explicitly match EXACT IDs without string replacement logic
   if(document.getElementById('top-val-all')) document.getElementById('top-val-all').textContent = c.all;
   if(document.getElementById('top-val-large')) document.getElementById('top-val-large').textContent = c.largecap;
   if(document.getElementById('top-val-mid')) document.getElementById('top-val-mid').textContent = c.midcap;
@@ -779,7 +735,7 @@ function renderGrid() {
       let sig = allSignals.find(s => s.ticker === tkr);
       if (!sig) { 
           const ltp = quoteMap[tkr] || 0; 
-          sig = { ticker: tkr, pattern: 'Manually Tracked', price: ltp, entry: ltp, sl: ltp*0.95, target: ltp*1.05, confidence_score: 50, confidence_reasons: ['User Added'], _isCustom: true, category: 'largecap' }; 
+          sig = { ticker: tkr, pattern: 'Manually Tracked', price: ltp, entry: ltp, sl: ltp*0.95, target: ltp*1.05, _isCustom: true, category: 'largecap' }; 
       } else { sig = {...sig, _isCustom: true}; }
       grid.appendChild(buildCard(sig, false, i));
     }); return;
@@ -816,48 +772,60 @@ function renderGrid() {
   signals.forEach((sig, index) => { grid.appendChild(buildCard(sig, watchlist.has(sig.ticker), index)); });
 }
 
-// FULL UN-MINIFIED BUILDCARD WITH ANIMATIONS
 function buildCard(sig, inWatch, index = 0) {
   const div = document.createElement('div'); 
   div.className = `signal-card ${sig.is_candidate ? 'active-trade' : ''}`;
   
-  const delay = Math.min(index * 0.05, 1.5);
-  div.style.animationDelay = `${delay}s`;
-  
   const k = String(sig.category || 'largecap').toLowerCase(); 
   const map = { largecap: ['large', 'LARGE CAP'], midcap: ['mid', 'MID CAP'], smallcap: ['small', 'SMALL CAP'], ipo: ['ipo', 'IPO'] };
-  const badgeClass = map[k] ? map[k][0] : 'large'; const labelText = map[k] ? map[k][1] : 'LARGE CAP';
+  const badgeClass = map[k] ? map[k][0] : 'large'; 
+  const labelText = map[k] ? map[k][1] : 'LARGE CAP';
   
   const ltp = sig.price != null ? sig.price : sig.entry;
   const priceStr = ltp > 0 ? ltp.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "Loading...";
   
-  const entry = sig.entry || ltp || 0; const sl = sig.sl || 0; const target = sig.target || 0; const lastClose = sig.last_close != null ? sig.last_close : entry;
+  const entry = sig.entry || ltp || 0; 
+  const sl = sig.sl || 0; 
+  const target = sig.target || 0; 
+  const lastClose = sig.last_close != null ? sig.last_close : entry;
   
-  const rrNum = Number(sig.rr || 0); const rrText = sig.rr_text || `1:${rrNum.toFixed(2)}`;
+  const rrNum = Number(sig.rr || 0); 
+  const rrText = sig.rr_text || `1:${rrNum.toFixed(2)}`;
   const slPct = Number(sig.sl_pct != null ? sig.sl_pct : (entry > 0 ? ((sl / entry) - 1) * 100 : 0));
   const targetPct = Number(sig.target_pct != null ? sig.target_pct : (entry > 0 ? ((target / entry) - 1) * 100 : 0));
 
-  const confScore = Number(sig.confidence_score !== undefined ? sig.confidence_score : 50).toFixed(0);
-  let scoreColor = confScore >= 75 ? 'high' : (confScore >= 55 ? 'med' : 'low');
-  const reasonsHtml = (sig.confidence_reasons || []).map(r => `<span class="conf-reason-pill">${r}</span>`).join('');
-
-  let chClass = 'flat'; let displayChangeStr = '0.00%'; let priceDirClass = 'flat';
+  let chClass = 'flat'; 
+  let displayChangeStr = '0.00%'; 
+  let priceDirClass = 'flat';
+  
   if (ltp > 0) {
       if (sig._myTrade) { 
-          const mover = sig.mover_5d_pct || 0; displayChangeStr = `P&L vs entry ${mover >= 0 ? '+' : ''}${mover.toFixed(2)}%`; 
-          if (mover > 0.01) { priceDirClass = 'up'; chClass = 'up'; } else if (mover < -0.01) { priceDirClass = 'down'; chClass = 'down'; } 
-      } else { 
-          const dayCh = lastClose > 0 ? ((ltp - lastClose) / lastClose) * 100 : 0; displayChangeStr = `${dayCh >= 0 ? '+' : ''}${dayCh.toFixed(2)}%`; 
-          if (dayCh > 0.01) { priceDirClass = 'up'; chClass = 'up'; } else if (dayCh < -0.01) { priceDirClass = 'down'; chClass = 'down'; } 
+          const mover = sig.mover_5d_pct || 0; 
+          displayChangeStr = `P&L vs entry ${mover >= 0 ? '+' : ''}${mover.toFixed(2)}%`; 
+          if (mover > 0.01) { priceDirClass = 'up'; chClass = 'up'; } 
+          else if (mover < -0.01) { priceDirClass = 'down'; chClass = 'down'; } 
+      } 
+      else { 
+          const dayCh = lastClose > 0 ? ((ltp - lastClose) / lastClose) * 100 : 0; 
+          displayChangeStr = `${dayCh >= 0 ? '+' : ''}${dayCh.toFixed(2)}%`; 
+          if (dayCh > 0.01) { priceDirClass = 'up'; chClass = 'up'; } 
+          else if (dayCh < -0.01) { priceDirClass = 'down'; chClass = 'down'; } 
       }
   }
 
   let entryPct = 30; let slW = 30; let tgtW = 70; 
-  if ((target - sl) > 0 && entry) { entryPct = ((entry - sl) / (target - sl)) * 100; slW = entryPct; tgtW = 100 - entryPct; }
+  if ((target - sl) > 0 && entry) { 
+      entryPct = ((entry - sl) / (target - sl)) * 100; 
+      slW = entryPct; 
+      tgtW = 100 - entryPct; 
+  }
   
   let statusBadge = '<span class="badge status">• ACTIVE</span>';
   if (sig._myTrade) { 
-      let st = 'open'; if(ltp >= target) st = 'target'; else if(ltp > 0 && ltp <= sl) st = 'sl'; 
+      let st = 'open'; 
+      if(ltp >= target) st = 'target'; 
+      else if(ltp > 0 && ltp <= sl) st = 'sl'; 
+      
       if (st === 'target') statusBadge = '<span class="badge status" style="border-color:rgba(74,222,128,0.6);color:#4ade80">TARGET HIT</span>'; 
       else if (st === 'sl') statusBadge = '<span class="badge status" style="border-color:rgba(248,113,113,0.6);color:#f87171">SL HIT</span>'; 
       else statusBadge = '<span class="badge status">• TRACKING</span>'; 
@@ -891,19 +859,6 @@ function buildCard(sig, inWatch, index = 0) {
       </div>
     </div>
     
-    <div class="confidence-wrap">
-      <div class="conf-header">
-          <span class="conf-title">Confidence</span>
-          <span class="conf-score ${scoreColor}">${confScore}/100</span>
-      </div>
-      <div class="conf-bar-bg">
-          <div class="conf-bar-fill" style="width: ${confScore}%"></div>
-      </div>
-      <div class="conf-reasons">
-          <span style="color:var(--text-dim);">Based on:</span> ${reasonsHtml || '<span class="conf-reason-pill">Baseline Data</span>'}
-      </div>
-    </div>
-    
     <div class="c-metrics-grid">
       <div class="metric-box entry">
           <div class="k">ENTRY</div>
@@ -932,7 +887,7 @@ function buildCard(sig, inWatch, index = 0) {
       <div class="risk-chip high ${Boolean(sig.risk_bucket_high_high) ? 'active' : ''}">High Risk · High Reward</div>
     </div>
     
-    <div class="c-row-3" style="margin-top:2px;">Duration: ${sig.duration || 'Mid-term'}</div>
+    <div class="c-row-3" style="margin-top:2px; font-family: var(--font-sans);">Duration: ${sig.duration || 'Mid-term'}</div>
     
     <div class="c-row-5">
       <div class="prog-labels">
@@ -952,10 +907,12 @@ function buildCard(sig, inWatch, index = 0) {
     </div>
   `;
 
+  // Attach listeners
   const addBtn = div.querySelector('.btn-add'); 
   if(addBtn) { 
       addBtn.addEventListener('click', (e) => { 
-          e.stopPropagation(); const wl = getWatchlist(); 
+          e.stopPropagation(); 
+          const wl = getWatchlist(); 
           if (wl.has(sig.ticker)) { wl.delete(sig.ticker); showToast(`${sig.ticker} removed`); } 
           else { wl.add(sig.ticker); showToast(`${sig.ticker} saved ⭐`); } 
           saveWatchlist(wl); renderGrid(); updateDashboardStats({counts:{}}); 
@@ -965,15 +922,23 @@ function buildCard(sig, inWatch, index = 0) {
   const rmBtn = div.querySelector('.btn-remove-custom'); 
   if(rmBtn) { 
       rmBtn.addEventListener('click', (e) => { 
-          e.stopPropagation(); let arr = getCustomTracked().filter(t => t !== sig.ticker); 
-          saveCustomTracked(arr); renderGrid(); const cEl = document.getElementById('nav-count-custom'); 
+          e.stopPropagation(); 
+          let arr = getCustomTracked().filter(t => t !== sig.ticker); 
+          saveCustomTracked(arr); 
+          renderGrid(); 
+          const cEl = document.getElementById('nav-count-custom'); 
           if(cEl) { cEl.textContent = arr.length; cEl.style.display = arr.length > 0 ? 'block' : 'none'; } 
           showToast(`${sig.ticker} removed`); 
       }); 
   }
   
   const chartBtnEl = div.querySelector('.chart-launch'); 
-  if(chartBtnEl) { chartBtnEl.addEventListener('click', (e) => { e.stopPropagation(); openChartModal(sig.ticker); }); }
+  if(chartBtnEl) { 
+      chartBtnEl.addEventListener('click', (e) => { 
+          e.stopPropagation(); 
+          openChartModal(sig.ticker); 
+      }); 
+  }
 
   return div;
 }
@@ -1012,7 +977,8 @@ function connectWebSocket() {
             document.querySelectorAll(`[data-ticker-price="${ticker}"]`).forEach(el => {
                 el.textContent = '₹' + newPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 if (oldPrice) { 
-                    el.classList.remove('price-flash-up', 'price-flash-down'); void el.offsetWidth; 
+                    el.classList.remove('price-flash-up', 'price-flash-down'); 
+                    void el.offsetWidth; 
                     if (newPrice > oldPrice) el.classList.add('price-flash-up'); 
                     else if (newPrice < oldPrice) el.classList.add('price-flash-down'); 
                 }
