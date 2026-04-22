@@ -9,6 +9,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
+<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+
 <style>
 /* ══════════════════════════════════════════════════════════════
    DESIGN TOKENS & CYBERPUNK THEME
@@ -396,8 +398,8 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .chart-title { font-size: 14px; font-weight: 700; letter-spacing: 0.04em; }
 .chart-close { border: 1px solid rgba(148, 163, 184, 0.4); border-radius: 8px; padding: 6px 10px; font-size: 12px; cursor: pointer; background: transparent; color: var(--text); font-family: 'Inter', sans-serif;}
 .chart-close:hover { background: rgba(255,255,255,0.1); }
-.chart-frame-wrap { flex: 1; }
-.chart-frame { width: 100%; height: 100%; border: 0; }
+.chart-frame-wrap { flex: 1; position: relative; }
+.chart-frame { width: 100%; height: 100%; border: 0; position: absolute; inset: 0; }
 
 #toast { position: fixed; bottom: 24px; right: 24px; background: rgba(15, 18, 35, 0.9); border: 1px solid var(--border); padding: 12px 20px; border-radius: var(--radius); font-size: 13px; z-index: 1000; display: none; box-shadow: 0 10px 25px rgba(0,0,0,0.5); font-family: 'Inter', sans-serif; }
 #toast.show { display: block; animation: slideUp 0.3s ease; }
@@ -614,7 +616,8 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
       <div class="chart-title" id="chart-title">Live chart</div>
       <button type="button" class="chart-close" id="chart-close">Close</button>
     </div>
-    <div class="chart-frame-wrap">
+    <div class="chart-frame-wrap" id="chart-container-wrap">
+      <div id="tv-chart" style="width: 100%; height: 100%; display: none;"></div>
       <iframe class="chart-frame" id="chart-frame" src="about:blank" loading="lazy"></iframe>
     </div>
   </div>
@@ -895,13 +898,90 @@ async function refreshQuotesForTrades() {
 }
 setInterval(refreshQuotesForTrades, 6000);
 
-function openChartModal(ticker) { 
-    const clean = String(ticker || '').toUpperCase().replace('.NS', ''); 
-    document.getElementById('chart-title').textContent = `${clean} · Live chart`; 
-    document.getElementById('chart-frame').src = `https://s.tradingview.com/widgetembed/?symbol=BSE%3A${encodeURIComponent(clean)}&interval=15&hidesidetoolbar=1&symboledit=0&saveimage=0&theme=dark&style=1&timezone=Asia%2FKolkata&withdateranges=1`; 
-    document.getElementById('chart-modal').classList.add('open'); 
+/* ══════════════════════════════════════════════════════════════
+   ADDED: LIGHTWEIGHT CHARTS LOGIC
+═══════════════════════════════════════════════════════════════ */
+let tvChart = null;
+let candleSeries = null;
+let entryLine = null;
+let slLine = null;
+let targetLine = null;
+
+function initLightweightChart() {
+    const container = document.getElementById('tv-chart');
+    container.innerHTML = '';
+    
+    tvChart = LightweightCharts.createChart(container, {
+        layout: { backgroundColor: '#080c1c', textColor: '#94a3b8' },
+        grid: { vertLines: { color: 'rgba(148, 163, 184, 0.1)' }, horzLines: { color: 'rgba(148, 163, 184, 0.1)' } },
+        crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+        rightPriceScale: { borderColor: 'rgba(148, 163, 184, 0.2)' },
+        timeScale: { borderColor: 'rgba(148, 163, 184, 0.2)' },
+    });
+    
+    candleSeries = tvChart.addCandlestickSeries({
+        upColor: '#4ade80', downColor: '#f87171', borderVisible: false,
+        wickUpColor: '#4ade80', wickDownColor: '#f87171'
+    });
+    
+    // Auto resize
+    new ResizeObserver(entries => {
+        if (entries.length === 0 || entries[0].target !== container) return;
+        const newRect = entries[0].contentRect;
+        tvChart.applyOptions({ height: newRect.height, width: newRect.width });
+    }).observe(container);
 }
-function closeChartModal() { document.getElementById('chart-modal').classList.remove('open'); document.getElementById('chart-frame').src = 'about:blank'; }
+
+async function loadLightweightChartData(sig) {
+    document.getElementById('chart-frame').style.display = 'none';
+    document.getElementById('tv-chart').style.display = 'block';
+    
+    if (!tvChart) initLightweightChart();
+    if (entryLine) candleSeries.removePriceLine(entryLine);
+    if (slLine) candleSeries.removePriceLine(slLine);
+    if (targetLine) candleSeries.removePriceLine(targetLine);
+
+    try {
+        const res = await fetch(`/api/history/${sig.ticker}`);
+        if (res.ok) {
+            const data = await res.json();
+            candleSeries.setData(data);
+            tvChart.timeScale().fitContent();
+
+            if (sig.entry) entryLine = candleSeries.createPriceLine({ price: sig.entry, color: '#38bdf8', lineWidth: 2, lineStyle: 2, axisLabelVisible: true, title: 'ENTRY' });
+            if (sig.sl) slLine = candleSeries.createPriceLine({ price: sig.sl, color: '#f87171', lineWidth: 2, lineStyle: 2, axisLabelVisible: true, title: 'SL' });
+            if (sig.target) targetLine = candleSeries.createPriceLine({ price: sig.target, color: '#4ade80', lineWidth: 2, lineStyle: 2, axisLabelVisible: true, title: 'TARGET' });
+        } else {
+            // Fallback to iframe if history api fails
+            fallbackToIframe(sig.ticker);
+        }
+    } catch (e) { 
+        console.error("Chart load failed", e);
+        fallbackToIframe(sig.ticker);
+    }
+}
+
+function fallbackToIframe(ticker) {
+    const clean = String(ticker || '').toUpperCase().replace('.NS', ''); 
+    document.getElementById('tv-chart').style.display = 'none';
+    document.getElementById('chart-frame').style.display = 'block';
+    document.getElementById('chart-frame').src = `https://s.tradingview.com/widgetembed/?symbol=BSE%3A${encodeURIComponent(clean)}&interval=15&hidesidetoolbar=1&symboledit=0&saveimage=0&theme=dark&style=1&timezone=Asia%2FKolkata&withdateranges=1`; 
+}
+
+function openChartModal(sig) { 
+    const clean = String(sig.ticker || '').toUpperCase().replace('.NS', ''); 
+    document.getElementById('chart-title').textContent = `${clean} · Live chart`; 
+    document.getElementById('chart-modal').classList.add('open'); 
+    
+    // Attempt lightweight charts first
+    loadLightweightChartData(sig);
+}
+
+function closeChartModal() { 
+    document.getElementById('chart-modal').classList.remove('open'); 
+    document.getElementById('chart-frame').src = 'about:blank'; 
+}
+
 function getLtp(ticker) { const s = allSignals.find((x) => x.ticker === ticker); if (s && s.price != null) return s.price; return quoteMap[ticker] != null ? quoteMap[ticker] : 0; }
 
 async function triggerRefresh() {
@@ -1019,14 +1099,12 @@ function renderGrid() {
   signals.forEach((sig, index) => { grid.appendChild(buildCard(sig, watchlist.has(sig.ticker), index)); });
 }
 
-// ── NEW: SPARKLINE GENERATOR ──
 function generateSparkline(lastClose, entry, ltp, isUp) {
     if(!lastClose || !entry || !ltp) return '';
     const min = Math.min(lastClose, entry, ltp);
     const max = Math.max(lastClose, entry, ltp);
-    const range = max - min || 1; // prevent divide by zero
+    const range = max - min || 1; 
     const h = 24, w = 60;
-    // Invert Y axis because SVG coordinates go down
     const y1 = h - ((lastClose - min) / range) * (h - 4) - 2; 
     const y2 = h - ((entry - min) / range) * (h - 4) - 2;
     const y3 = h - ((ltp - min) / range) * (h - 4) - 2;
@@ -1129,8 +1207,9 @@ function buildCard(sig, inWatch, index = 0) {
   const rmBtn = div.querySelector('.btn-remove-custom'); 
   if(rmBtn) { rmBtn.addEventListener('click', (e) => { e.stopPropagation(); let arr = getCustomTracked().filter(t => t !== sig.ticker); saveCustomTracked(arr); renderGrid(); const cEl = document.getElementById('nav-count-custom'); if(cEl) { cEl.textContent = arr.length; cEl.style.display = arr.length > 0 ? 'block' : 'none'; } showToast(`${sig.ticker} removed`); }); }
   
+  // UPDATED CHART LAUNCHER
   const chartBtnEl = div.querySelector('.chart-launch'); 
-  if(chartBtnEl) { chartBtnEl.addEventListener('click', (e) => { e.stopPropagation(); openChartModal(sig.ticker); }); }
+  if(chartBtnEl) { chartBtnEl.addEventListener('click', (e) => { e.stopPropagation(); openChartModal(sig); }); }
 
   return div;
 }
@@ -1166,7 +1245,7 @@ function connectWebSocket() {
         let pnlNeedsUpdate = false;
         Object.keys(msg.data).forEach(ticker => {
             const newPrice = msg.data[ticker]; const oldPrice = quoteMap[ticker]; quoteMap[ticker] = newPrice;
-            checkTradeAlerts(ticker, newPrice); // Check for audio alerts
+            checkTradeAlerts(ticker, newPrice); 
             
             let sigIndex = allSignals.findIndex(s => s.ticker === ticker); if (sigIndex !== -1) { allSignals[sigIndex].price = newPrice; }
             document.querySelectorAll(`[data-ticker-price="${ticker}"]`).forEach(el => {
@@ -1213,7 +1292,7 @@ document.getElementById('btn-hot-rail').addEventListener('click', () => {
 });
 document.getElementById('chart-close').addEventListener('click', closeChartModal);
 
-// ── NEW: ALGORITHMIC POSITION SIZING LOGIC ──
+// ── POSITION SIZING LOGIC ──
 document.getElementById('mt-risk').addEventListener('input', (e) => {
     const risk = parseFloat(e.target.value);
     const entry = parseFloat(document.getElementById('mt-entry').value);
