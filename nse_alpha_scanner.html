@@ -98,7 +98,6 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .sidebar-scroll { flex: 1; overflow-y: auto; padding: 20px 16px; display: flex; flex-direction: column; gap: 24px; font-family: 'Inter', sans-serif; }
 .nav-section-title { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; padding-left: 12px; font-weight: 600; }
 
-/* Custom Light Blue Dropdowns */
 .sidebar-select {
   width: 100%; margin-top: 6px; padding: 10px 14px; border-radius: 12px; 
   border: 1px solid rgba(14, 165, 233, 0.5); background: linear-gradient(180deg, #38bdf8 0%, #0ea5e9 100%);
@@ -264,6 +263,13 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .badge.ipo   { background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.3); color: var(--ipo); }
 .badge.status { background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.4); color: var(--active); }
 
+/* SENTIMENT BADGE CSS */
+.sent-badge { font-size: 9px; font-weight: 800; letter-spacing: 0.5px; padding: 3px 8px; border-radius: 4px; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 4px; border: 1px solid transparent; }
+.sent-bullish { background: rgba(74, 222, 128, 0.1); border-color: rgba(74, 222, 128, 0.3); color: #4ade80; }
+.sent-bearish { background: rgba(248, 113, 113, 0.1); border-color: rgba(248, 113, 113, 0.3); color: #f87171; }
+.sent-neutral { background: rgba(148, 163, 184, 0.1); border-color: rgba(148, 163, 184, 0.3); color: #94a3b8; }
+.sent-icon { font-size: 7px; }
+
 .btn-add { width: 24px; height: 24px; background: rgba(255,255,255,0.05); border: 1px solid rgba(148,163,184,0.2); border-radius: 6px; color: var(--text-dim); display: grid; place-items: center; font-size: 14px; transition: all 0.2s; cursor:pointer;}
 .btn-add:hover, .btn-add.saved { border-color: var(--all); color: var(--all); transform: scale(1.15) rotate(90deg); }
 .btn-remove-custom { width: 24px; height: 24px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; color: var(--loss); display: grid; place-items: center; font-size: 14px; transition: all 0.2s; cursor: pointer; }
@@ -289,9 +295,6 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .c-change.up { color: #4ade80 !important; background: rgba(74, 222, 128, 0.1); }
 .c-change.down { color: #f87171 !important; background: rgba(248, 113, 113, 0.1); }
 
-/* SPARKLINE MINI CHART */
-.sparkline-container { width: 50px; height: 24px; margin-left: auto; filter: drop-shadow(0 0 4px rgba(14, 165, 233, 0.5)); }
-
 .c-metrics-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 14px; }
 .metric-box { padding: 8px 6px; border-radius: 8px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(148, 163, 184, 0.12); transition: all 0.2s;}
 .metric-box:hover { background: rgba(255,255,255,0.06); transform: translateY(-2px); border-color: rgba(148,163,184,0.3);}
@@ -303,12 +306,6 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .metric-box:nth-child(3) .v { color: #4ade80; }
 .metric-box:nth-child(4) .v { color: #38bdf8; }
 .metric-box:nth-child(5) .v { color: #d8b4fe; }
-
-.risk-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 7px; }
-.risk-chip { font-size: 9px; font-weight: 700; padding: 6px 4px; border-radius: 6px; border: 1px solid rgba(148, 163, 184, 0.2); color: var(--text-dim); text-align: center; font-family: 'Inter', sans-serif;}
-.risk-chip.active { color: #0b1322; border-color: transparent; }
-.risk-chip.low.active { background: linear-gradient(135deg, #4ade80, #22d3ee); box-shadow: 0 0 10px rgba(34,211,238,0.2);}
-.risk-chip.high.active { background: linear-gradient(135deg, #fb7185, #f97316); color: #fff; box-shadow: 0 0 10px rgba(249,115,22,0.3);}
 
 .c-row-5 { margin-top: auto; padding-top: 12px; }
 .prog-labels { display: flex; justify-content: space-between; font-size: 9px; margin-bottom: 6px; }
@@ -1099,23 +1096,6 @@ function renderGrid() {
   signals.forEach((sig, index) => { grid.appendChild(buildCard(sig, watchlist.has(sig.ticker), index)); });
 }
 
-function generateSparkline(lastClose, entry, ltp, isUp) {
-    if(!lastClose || !entry || !ltp) return '';
-    const min = Math.min(lastClose, entry, ltp);
-    const max = Math.max(lastClose, entry, ltp);
-    const range = max - min || 1; 
-    const h = 24, w = 60;
-    const y1 = h - ((lastClose - min) / range) * (h - 4) - 2; 
-    const y2 = h - ((entry - min) / range) * (h - 4) - 2;
-    const y3 = h - ((ltp - min) / range) * (h - 4) - 2;
-    const color = isUp ? '#4ade80' : '#f87171';
-    
-    return `<svg class="sparkline-container" viewBox="0 0 ${w} ${h}">
-        <path d="M0,${y1} L${w/2},${y2} L${w},${y3}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-        <circle cx="${w}" cy="${y3}" r="2" fill="${color}" />
-    </svg>`;
-}
-
 function buildCard(sig, inWatch, index = 0) {
   const div = document.createElement('div'); 
   div.className = `signal-card ${sig.is_candidate ? 'active-trade' : ''}`;
@@ -1148,8 +1128,6 @@ function buildCard(sig, inWatch, index = 0) {
       }
   }
 
-  const sparklineHtml = ltp > 0 ? generateSparkline(lastClose, entry, ltp, isUp) : '';
-
   let entryPct = 30; let slW = 30; let tgtW = 70; 
   if ((target - sl) > 0 && entry) { entryPct = ((entry - sl) / (target - sl)) * 100; slW = entryPct; tgtW = 100 - entryPct; }
   
@@ -1161,6 +1139,13 @@ function buildCard(sig, inWatch, index = 0) {
       else statusBadge = '<span class="badge status">• TRACKING</span>'; 
   }
 
+  const sent = sig.sentiment || 'NEUTRAL';
+  let sentClass = 'sent-neutral';
+  let sentIcon = '⚪';
+  if (sent === 'BULLISH') { sentClass = 'sent-bullish'; sentIcon = '🟢'; }
+  if (sent === 'BEARISH') { sentClass = 'sent-bearish'; sentIcon = '🔴'; }
+  const sentimentHtml = `<span class="sent-badge ${sentClass}"><span class="sent-icon">${sentIcon}</span>${sent}</span>`;
+
   let actionBtnHtml = ''; 
   if (!sig._myTrade) { 
       if (sig._isCustom) actionBtnHtml = `<button class="btn-remove-custom" title="Stop Tracking">✕</button>`; 
@@ -1169,14 +1154,19 @@ function buildCard(sig, inWatch, index = 0) {
 
   div.innerHTML = `
     <div class="c-row-1"><div class="c-ticker-top">${sig.ticker}</div><div class="c-pattern-top">${sig.pattern || 'Setup'}</div></div>
-    <div class="c-row-2"><div class="c-badges c-badges-cluster"><span class="badge ${badgeClass} cat-wide">${labelText}</span>${statusBadge}</div></div>
+    <div class="c-row-2">
+      <div class="c-badges c-badges-cluster">
+        <span class="badge ${badgeClass} cat-wide">${labelText}</span>
+        ${sentimentHtml}
+        ${statusBadge}
+      </div>
+    </div>
     ${sig._myTrade ? `<div class="c-row-3" style="font-family: var(--font-sans);">Fixed entry ₹${(sig.entry || 0).toFixed(2)} · SL ₹${sl.toFixed(2)} · T ₹${target.toFixed(2)}</div>` : ''}
     <div class="c-row-4">
       <div class="c-row-4-main">
           <div class="c-price ${priceDirClass}" data-ticker-price="${sig.ticker}">₹${priceStr}</div>
           <div class="c-change ${chClass}">${displayChangeStr}</div>
       </div>
-      ${sparklineHtml}
     </div>
 
     <div class="c-metrics-grid">
@@ -1186,10 +1176,7 @@ function buildCard(sig, inWatch, index = 0) {
       <div class="metric-box lastclose"><div class="k">LAST CLOSE</div><div class="v">₹${Number(lastClose).toFixed(2)}</div></div>
       <div class="metric-box rr"><div class="k">RISK:REWARD</div><div class="v">${rrText}</div></div>
     </div>
-    <div class="risk-columns">
-      <div class="risk-chip low ${Boolean(sig.risk_bucket_low_high) ? 'active' : ''}">Low Risk · High Reward</div>
-      <div class="risk-chip high ${Boolean(sig.risk_bucket_high_high) ? 'active' : ''}">High Risk · High Reward</div>
-    </div>
+    
     <div class="c-row-3" style="margin-top:2px; font-family: var(--font-sans);">Duration: ${sig.duration || 'Mid-term'}</div>
     <div class="c-row-5">
       <div class="prog-labels"><span class="prog-lbl-sl">SL ${sl.toFixed(2)}</span><span class="prog-lbl-tg">Target ${target.toFixed(2)}</span></div>
@@ -1207,7 +1194,6 @@ function buildCard(sig, inWatch, index = 0) {
   const rmBtn = div.querySelector('.btn-remove-custom'); 
   if(rmBtn) { rmBtn.addEventListener('click', (e) => { e.stopPropagation(); let arr = getCustomTracked().filter(t => t !== sig.ticker); saveCustomTracked(arr); renderGrid(); const cEl = document.getElementById('nav-count-custom'); if(cEl) { cEl.textContent = arr.length; cEl.style.display = arr.length > 0 ? 'block' : 'none'; } showToast(`${sig.ticker} removed`); }); }
   
-  // UPDATED CHART LAUNCHER
   const chartBtnEl = div.querySelector('.chart-launch'); 
   if(chartBtnEl) { chartBtnEl.addEventListener('click', (e) => { e.stopPropagation(); openChartModal(sig); }); }
 
