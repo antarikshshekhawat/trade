@@ -51,7 +51,6 @@ body {
   overflow: hidden; 
   display: flex; 
   flex-direction: column; 
-  /* Cyberpunk Background Layers */
   background:
     radial-gradient(ellipse 120% 80% at 20% -10%, rgba(99, 102, 241, 0.25), transparent 50%),
     radial-gradient(ellipse 80% 50% at 100% 0%, rgba(34, 211, 238, 0.12), transparent 45%),
@@ -64,13 +63,8 @@ body::before {
   mask-image: radial-gradient(ellipse 90% 70% at 50% 30%, black 20%, transparent 75%);
 }
 
-/* STRICT TYPOGRAPHY RULES */
-.brand-text, .c-ticker-top, .page-title-text, .hot-sector-card .name, .chart-title, h3 {
-    font-family: 'Outfit', sans-serif !important;
-}
-.c-price, .c-change, .metric-box .v, .prog-labels, .topbar-stats .stat-val, .page-title-num, .clock, .nav-count, .hot-sector-card .pct, .sector-row .sp, .last-updated, .pos-size-result, .pnl-value {
-    font-family: 'JetBrains Mono', monospace !important;
-}
+.brand-text, .c-ticker-top, .page-title-text, .hot-sector-card .name, .chart-title, h3 { font-family: 'Outfit', sans-serif !important; }
+.c-price, .c-change, .metric-box .v, .prog-labels, .topbar-stats .stat-val, .page-title-num, .clock, .nav-count, .hot-sector-card .pct, .sector-row .sp, .last-updated, .pos-size-result, .pnl-value { font-family: 'JetBrains Mono', monospace !important; }
 
 button { cursor: pointer; border: none; background: none; font: inherit; color: inherit; }
 input { font: inherit; color: inherit; background: none; border: none; outline: none; }
@@ -78,7 +72,6 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
-/* Global Visual Alert Flashes */
 @keyframes screenFlashGreen { 0% { box-shadow: inset 0 0 100px rgba(74, 222, 128, 0.8); } 100% { box-shadow: inset 0 0 0px transparent; } }
 @keyframes screenFlashRed { 0% { box-shadow: inset 0 0 100px rgba(248, 113, 113, 0.8); } 100% { box-shadow: inset 0 0 0px transparent; } }
 .flash-green-overlay { animation: screenFlashGreen 1s ease-out; }
@@ -118,7 +111,6 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .nav-icon { font-size: 14px; width: 16px; text-align: center; }
 .nav-count { margin-left: auto; font-size: 11px; background: rgba(15, 18, 35, 0.85); border: 1px solid var(--border); padding: 2px 8px; border-radius: 12px; }
 
-/* Position Sizing Form */
 .my-trade-form { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .my-trade-form input { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.2); background: rgba(0,0,0,0.25); font-size: 12px; font-family: 'Inter', sans-serif; transition: all 0.3s; }
 .my-trade-form input:focus { border-color: var(--all); box-shadow: 0 0 8px rgba(14, 165, 233, 0.3); }
@@ -208,7 +200,6 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .cache-badge { background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: var(--ipo); font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 20px; letter-spacing: 0.5px; font-family: 'Inter', sans-serif;}
 .last-updated { font-size: 11px; color: var(--text-muted); }
 
-/* CUSTOM SEARCH FIX */
 .search-container-wrapper { margin-left: auto; position: relative; width: 300px; }
 .search-container { display: flex; align-items: center; background: rgba(15, 18, 35, 0.85); border: 1px solid rgba(148, 163, 184, 0.15); border-radius: var(--radius); padding: 8px 16px; width: 100%; gap: 10px; transition: all 0.3s ease;}
 .search-container:focus-within { border-color: var(--large); transform: translateY(-1px); box-shadow: 0 5px 15px rgba(34,211,238,0.2);}
@@ -306,6 +297,12 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .metric-box:nth-child(3) .v { color: #4ade80; }
 .metric-box:nth-child(4) .v { color: #38bdf8; }
 .metric-box:nth-child(5) .v { color: #d8b4fe; }
+
+.risk-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 7px; }
+.risk-chip { font-size: 9px; font-weight: 700; padding: 6px 4px; border-radius: 6px; border: 1px solid rgba(148, 163, 184, 0.2); color: var(--text-dim); text-align: center; font-family: 'Inter', sans-serif;}
+.risk-chip.active { color: #0b1322; border-color: transparent; }
+.risk-chip.low.active { background: linear-gradient(135deg, #4ade80, #22d3ee); box-shadow: 0 0 10px rgba(34,211,238,0.2);}
+.risk-chip.high.active { background: linear-gradient(135deg, #fb7185, #f97316); color: #fff; box-shadow: 0 0 10px rgba(249,115,22,0.3);}
 
 .c-row-5 { margin-top: auto; padding-top: 12px; }
 .prog-labels { display: flex; justify-content: space-between; font-size: 9px; margin-bottom: 6px; }
@@ -420,12 +417,10 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
   #cards-grid { padding: 0 16px 32px 16px; grid-template-columns: 1fr; }
   .c-ticker-top { font-size: 16px; }
   
-  /* Prevent text breaking inside metrics box on mobile */
   .c-metrics-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .metric-box { padding: 8px 6px; overflow: hidden; }
   .metric-box .v { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   
-  /* Slide-out Sidebar Logic */
   #sidebar {
     position: fixed; left: 0; top: 0; bottom: 0;
     transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
@@ -437,7 +432,6 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
   .sidebar-overlay.open { display: block; animation: fadeOverlay 0.3s ease; }
   @keyframes fadeOverlay { from { opacity: 0; } to { opacity: 1; } }
   
-  /* Sector Rail Mobile */
   #sector-rail { 
     position: fixed; right: 0; top: 0; bottom: 0; z-index: 1001; 
     box-shadow: -20px 0 50px rgba(0,0,0,0.5); 
@@ -921,7 +915,6 @@ function initLightweightChart() {
         wickUpColor: '#4ade80', wickDownColor: '#f87171'
     });
     
-    // Auto resize
     new ResizeObserver(entries => {
         if (entries.length === 0 || entries[0].target !== container) return;
         const newRect = entries[0].contentRect;
@@ -949,7 +942,6 @@ async function loadLightweightChartData(sig) {
             if (sig.sl) slLine = candleSeries.createPriceLine({ price: sig.sl, color: '#f87171', lineWidth: 2, lineStyle: 2, axisLabelVisible: true, title: 'SL' });
             if (sig.target) targetLine = candleSeries.createPriceLine({ price: sig.target, color: '#4ade80', lineWidth: 2, lineStyle: 2, axisLabelVisible: true, title: 'TARGET' });
         } else {
-            // Fallback to iframe if history api fails
             fallbackToIframe(sig.ticker);
         }
     } catch (e) { 
@@ -970,7 +962,6 @@ function openChartModal(sig) {
     document.getElementById('chart-title').textContent = `${clean} · Live chart`; 
     document.getElementById('chart-modal').classList.add('open'); 
     
-    // Attempt lightweight charts first
     loadLightweightChartData(sig);
 }
 
@@ -1140,8 +1131,7 @@ function buildCard(sig, inWatch, index = 0) {
   }
 
   const sent = sig.sentiment || 'NEUTRAL';
-  let sentClass = 'sent-neutral';
-  let sentIcon = '⚪';
+  let sentClass = 'sent-neutral'; let sentIcon = '⚪';
   if (sent === 'BULLISH') { sentClass = 'sent-bullish'; sentIcon = '🟢'; }
   if (sent === 'BEARISH') { sentClass = 'sent-bearish'; sentIcon = '🔴'; }
   const sentimentHtml = `<span class="sent-badge ${sentClass}"><span class="sent-icon">${sentIcon}</span>${sent}</span>`;
@@ -1150,6 +1140,21 @@ function buildCard(sig, inWatch, index = 0) {
   if (!sig._myTrade) { 
       if (sig._isCustom) actionBtnHtml = `<button class="btn-remove-custom" title="Stop Tracking">✕</button>`; 
       else actionBtnHtml = `<button class="btn-add ${inWatch ? 'saved' : ''}" title="Toggle Watchlist">${inWatch ? '★' : '+'}</button>`; 
+  }
+
+  // --- AUTOMATIC RISK BUCKET FALLBACK LOGIC ---
+  const safeSlPct = Math.abs(slPct);
+  const safeRr = Number(sig.rr) || 0;
+  let isLowRisk = sig.risk_bucket_low_high;
+  let isHighRisk = sig.risk_bucket_high_high;
+  
+  // If backend dropped the flag, calculate it instantly in JS
+  if (isLowRisk === undefined && isHighRisk === undefined) {
+      if (safeSlPct > 0 && safeSlPct <= 4.0 && safeRr >= 1.5) {
+          isLowRisk = true;
+      } else if (safeSlPct > 4.0 && safeRr >= 2.0) {
+          isHighRisk = true;
+      }
   }
 
   div.innerHTML = `
@@ -1176,7 +1181,10 @@ function buildCard(sig, inWatch, index = 0) {
       <div class="metric-box lastclose"><div class="k">LAST CLOSE</div><div class="v">₹${Number(lastClose).toFixed(2)}</div></div>
       <div class="metric-box rr"><div class="k">RISK:REWARD</div><div class="v">${rrText}</div></div>
     </div>
-    
+    <div class="risk-columns">
+      <div class="risk-chip low ${isLowRisk ? 'active' : ''}">Low Risk · High Reward</div>
+      <div class="risk-chip high ${isHighRisk ? 'active' : ''}">High Risk · High Reward</div>
+    </div>
     <div class="c-row-3" style="margin-top:2px; font-family: var(--font-sans);">Duration: ${sig.duration || 'Mid-term'}</div>
     <div class="c-row-5">
       <div class="prog-labels"><span class="prog-lbl-sl">SL ${sl.toFixed(2)}</span><span class="prog-lbl-tg">Target ${target.toFixed(2)}</span></div>
