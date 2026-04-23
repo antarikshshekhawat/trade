@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import urllib.request
 from abc import ABC, abstractmethod
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from io import StringIO
 from typing import Dict, List
@@ -9,6 +10,7 @@ import time
 
 import pandas as pd
 import yfinance as yf
+import requests
 
 # ─────────────────────────────────────────────────────────────
 # INDEX DATA SOURCES
@@ -134,7 +136,7 @@ def build_stock_universe() -> Dict[str, List[str]]:
             print(f"[WARNING] Using fallback for {category}")
             universe[category] = FALLBACK_UNIVERSE[category]
 
-    universe["ipo"] = FALLBACK_IPO_STOCKS
+        universe["ipo"] = FALLBACK_IPO_STOCKS
     return universe
 
 @dataclass
@@ -210,7 +212,7 @@ class YFinanceDataProvider(MarketDataProvider):
         return pd.DataFrame()
 
 class BrokerRealtimeProvider(MarketDataProvider):
-    """Uses nsepython to get much fresher data than yfinance."""
+    """Uses default provider for history but named for future API integration."""
     def get_ohlc(self, symbol: str, period="1d", interval="1m") -> pd.DataFrame:
         # Note: for deep technical scans (EMA50), yfinance is still better for history.
         # Use this provider specifically for micro-updates.
@@ -218,42 +220,43 @@ class BrokerRealtimeProvider(MarketDataProvider):
 
 def fetch_last_prices_nse(symbols: List[str]) -> Dict[str, float]:
     """
-    High-speed Live Price Fetcher.
-    Tries nsepython first, falls back to yfinance if NSE blocks the cloud IP.
+    High-speed Live Price Fetcher bypassing delays by using yfinance fast_info.
     """
-    out: Dict[str, float] = {}
-    seen = set()
+    prices = {}
     
-    for raw in symbols[:30]:  # Cap at 30 to avoid rate limits
-        clean = _clean_symbol(str(raw))
-        if not clean or clean in seen:
-            continue
-        seen.add(clean)
-        
-        # 1. Try NSEPython (Super fast, but often blocked by Railway/Cloud firewalls)
+    # 1. MUST use a fresh session to bypass any SQLite caches 
+    # that the main scanner might be using.
+    fresh_session = requests.Session()
+    
+    def _get_price(sym):
+        clean = _clean_symbol(str(sym))
+        if not clean:
+            return clean, None
         try:
-            from nsepython import nse_quote_ltp
-            ltp = nse_quote_ltp(clean)
-            if ltp:
-                out[clean] = round(float(ltp), 2)
-                continue # Success! Skip the fallback and go to the next stock
+            ticker = yf.Ticker(f"{clean}.NS", session=fresh_session)
+            # 2. 'fast_info' hits a different API endpoint that is 
+            # significantly closer to real-time than standard .history()
+            price = ticker.fast_info['lastPrice']
+            return clean, round(price, 2)
         except Exception:
-            pass # Blocked by NSE. Silently move to fallback.
+            return clean, None
 
-        # 2. Fallback to YFinance (Slight delay, but 100% reliable on Railway)
-        try:
-            ticker = _to_nse_ticker(clean)
-            t = yf.Ticker(ticker)
-            # Fetch last 5 days to ensure we get a price even on weekends/holidays
-            hist = t.history(period="5d", interval="1d") 
-            if hist is not None and not hist.empty and "Close" in hist.columns:
-                last = float(hist["Close"].iloc[-1])
-                out[clean] = round(last, 2)
-        except Exception as e:
-            print(f"[LIVE FETCH ERROR] for {clean}: {e}")
-            continue
-            
-    return out
+    seen = set()
+    unique_symbols = []
+    for s in symbols:
+        c = _clean_symbol(str(s))
+        if c and c not in seen:
+            unique_symbols.append(c)
+            seen.add(c)
+
+    # 3. Fire all requests simultaneously so the WebSocket doesn't bottleneck
+    with ThreadPoolExecutor(max_workers=15) as executor:
+        results = executor.map(_get_price, unique_symbols[:30]) # Cap at 30 to avoid rate limits
+        for sym, price in results:
+            if price is not None:
+                prices[sym] = price
+                
+    return prices
 
 # ─────────────────────────────────────────────────────────────
 # DEFAULT PROVIDER
