@@ -234,6 +234,12 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .metric-box:hover { background: rgba(255,255,255,0.06); transform: translateY(-2px); border-color: rgba(148,163,184,0.3);}
 .metric-box .k { font-size: 8px; color: var(--text-muted); letter-spacing: 0.8px; font-family: 'Inter', sans-serif;}
 .metric-box .v { margin-top: 2px; font-size: 11px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Adding explicit styles for percentage spans in metrics */
+.metric-box .v span.pct { font-size: 9px; margin-left: 2px; }
+.metric-box .v span.pct.up { color: #4ade80; }
+.metric-box .v span.pct.down { color: #f87171; }
+
 .metric-box:nth-child(1) .v { color: #fde047; }
 .metric-box:nth-child(2) .v { color: #f87171; }
 .metric-box:nth-child(3) .v { color: #4ade80; }
@@ -241,8 +247,8 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .metric-box:nth-child(5) .v { color: #d8b4fe; }
 
 .risk-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 7px; }
-.risk-chip { font-size: 9px; font-weight: 700; padding: 6px 4px; border-radius: 6px; border: 1px solid rgba(148, 163, 184, 0.2); color: var(--text-dim); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: 'Inter', sans-serif;}
-.risk-chip.active { color: #0b1322; border-color: transparent; }
+.risk-chip { font-size: 9px; font-weight: 700; padding: 6px 4px; border-radius: 6px; border: 1px solid rgba(148, 163, 184, 0.2); color: var(--text-dim); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: 'Inter', sans-serif; opacity: 0.5;}
+.risk-chip.active { color: #0b1322; border-color: transparent; opacity: 1; }
 .risk-chip.low.active { background: linear-gradient(135deg, #4ade80, #22d3ee); box-shadow: 0 0 10px rgba(34,211,238,0.2);}
 .risk-chip.high.active { background: linear-gradient(135deg, #fb7185, #f97316); color: #fff; box-shadow: 0 0 10px rgba(249,115,22,0.3);}
 
@@ -260,7 +266,7 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--all); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px auto; }
 
 /* ══════════════════════════════════════════════════════════════
-   SECTOR RAIL 
+   RESTORED PREVIOUS HOT SECTORS PANEL
 ═══════════════════════════════════════════════════════════════ */
 #sector-rail { 
     width: var(--rail-w); min-width: var(--rail-w); background: rgba(12, 14, 28, 0.72); backdrop-filter: blur(16px); 
@@ -359,7 +365,7 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
     will-change: transform; display: flex !important; 
   }
   #sector-rail.rail-open { transform: translateX(0); }
-  .mobile-close-sector { display: block !important; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: #fff; font-size: 16px; padding: 4px 12px; cursor: pointer; font-weight: bold; font-family: 'Inter', sans-serif !important;}
+  .mobile-close-sector { display: block !important; background: transparent; border: none; color: #f8fafc; font-size: 20px; padding: 4px 12px; cursor: pointer; font-weight: bold; font-family: 'Inter', sans-serif !important;}
 }
 </style>
 </head>
@@ -861,7 +867,10 @@ function renderMyTradesSidebar() {
     const stHtml = st === 'target' ? '<span class="t-status st-tg">Target</span>' : st === 'sl' ? '<span class="t-status st-sl">Stop</span>' : '<span class="t-status st-open">Open</span>';
     const qtyStr = t.qty > 0 ? `<span class="t-qty">x${t.qty}</span>` : '';
     
-    return `<div class="my-trade-row" data-id="${t.id}">${stHtml}<div class="t-name">${t.ticker}${qtyStr}</div><div class="t-line">E ${t.entry.toFixed(2)} · SL ${t.sl.toFixed(2)} · T ${t.target.toFixed(2)}</div><div class="t-line">LTP ${ltp > 0 ? ltp.toFixed(2) : '—'}</div><button type="button" class="btn-del-trade" data-id="${t.id}">Remove</button></div>`;
+    const slPct = t.entry > 0 ? ((t.sl / t.entry) - 1) * 100 : 0;
+    const tgtPct = t.entry > 0 ? ((t.target / t.entry) - 1) * 100 : 0;
+    
+    return `<div class="my-trade-row" data-id="${t.id}">${stHtml}<div class="t-name">${t.ticker}${qtyStr}</div><div class="t-line">E ${t.entry.toFixed(2)} · SL ${t.sl.toFixed(2)} (${slPct.toFixed(2)}%) · T ${t.target.toFixed(2)} (+${tgtPct.toFixed(2)}%)</div><div class="t-line">LTP ${ltp > 0 ? ltp.toFixed(2) : '—'}</div><button type="button" class="btn-del-trade" data-id="${t.id}">Remove</button></div>`;
   }).join('');
   
   host.querySelectorAll('.btn-del-trade').forEach((btn) => { 
@@ -919,7 +928,8 @@ function renderGrid() {
 
   document.getElementById('header-count').textContent = signals.length;
   const wlBadge = document.getElementById('nav-count-watchlist'); 
-  wlBadge.textContent = watchlist.size; wlBadge.style.display = watchlist.size > 0 ? 'block' : 'none';
+  wlBadge.textContent = watchlist.size; 
+  wlBadge.style.display = watchlist.size > 0 ? 'block' : 'none';
   
   if (signals.length === 0) { grid.innerHTML = '<div class="state-message">📭 No signals match current filters</div>'; return; }
   
@@ -994,7 +1004,6 @@ function buildCard(sig, inWatch, index = 0) {
   div.innerHTML = `
     <div class="c-row-1"><div class="c-ticker-top">${sig.ticker}</div><div class="c-pattern-top">${sig.pattern || 'Setup'}</div></div>
     <div class="c-row-2"><div class="c-badges c-badges-cluster"><span class="badge ${badgeClass} cat-wide">${labelText}</span>${statusBadge}</div></div>
-    ${sig._myTrade ? `<div class="c-row-3" style="font-family: var(--font-sans);">Fixed entry ₹${(sig.entry || 0).toFixed(2)} · SL ₹${sl.toFixed(2)} · T ₹${target.toFixed(2)}</div>` : ''}
     <div class="c-row-4">
       <div class="c-row-4-main">
           <div class="c-price ${priceDirClass}" data-ticker-price="${sig.ticker}">₹${priceStr}</div>
@@ -1005,8 +1014,8 @@ function buildCard(sig, inWatch, index = 0) {
 
     <div class="c-metrics-grid">
       <div class="metric-box entry"><div class="k">ENTRY</div><div class="v">₹${entry.toFixed(2)}</div></div>
-      <div class="metric-box slstop"><div class="k">STOP LOSS</div><div class="v">₹${sl.toFixed(2)} (${slPct.toFixed(2)}%)</div></div>
-      <div class="metric-box tgt"><div class="k">TARGET</div><div class="v">₹${target.toFixed(2)} (+${targetPct.toFixed(2)}%)</div></div>
+      <div class="metric-box slstop"><div class="k">STOP LOSS</div><div class="v">₹${sl.toFixed(2)}<br><span class="pct down">(${slPct.toFixed(2)}%)</span></div></div>
+      <div class="metric-box tgt"><div class="k">TARGET</div><div class="v">₹${target.toFixed(2)}<br><span class="pct up">(+${targetPct.toFixed(2)}%)</span></div></div>
       <div class="metric-box lastclose"><div class="k">LAST CLOSE</div><div class="v">₹${Number(lastClose).toFixed(2)}</div></div>
       <div class="metric-box rr"><div class="k">RISK:REWARD</div><div class="v">${rrText}</div></div>
     </div>
