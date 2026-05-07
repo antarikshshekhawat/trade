@@ -11,7 +11,7 @@ import warnings
 
 import pandas as pd
 import yfinance as yf
-from nsepython import nse_quote_ltp  # High-speed live data fetcher
+from nsepython import nse_quote_ltp  # Kept for compatibility if used elsewhere
 
 # ─────────────────────────────────────────────────────────────
 # INDEX DATA SOURCES
