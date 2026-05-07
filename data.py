@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import urllib.request
 from abc import ABC, abstractmethod
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from io import StringIO
 from typing import Dict, List
@@ -10,7 +9,7 @@ import time
 
 import pandas as pd
 import yfinance as yf
-import requests
+from nsepython import nse_quote_ltp  # High-speed live data fetcher
 
 # ─────────────────────────────────────────────────────────────
 # INDEX DATA SOURCES
@@ -136,7 +135,7 @@ def build_stock_universe() -> Dict[str, List[str]]:
             print(f"[WARNING] Using fallback for {category}")
             universe[category] = FALLBACK_UNIVERSE[category]
 
-        universe["ipo"] = FALLBACK_IPO_STOCKS
+    universe["ipo"] = FALLBACK_IPO_STOCKS
     return universe
 
 @dataclass
@@ -212,7 +211,7 @@ class YFinanceDataProvider(MarketDataProvider):
         return pd.DataFrame()
 
 class BrokerRealtimeProvider(MarketDataProvider):
-    """Uses default provider for history but named for future API integration."""
+    """Uses nsepython to get much fresher data than yfinance."""
     def get_ohlc(self, symbol: str, period="1d", interval="1m") -> pd.DataFrame:
         # Note: for deep technical scans (EMA50), yfinance is still better for history.
         # Use this provider specifically for micro-updates.
@@ -220,43 +219,56 @@ class BrokerRealtimeProvider(MarketDataProvider):
 
 def fetch_last_prices_nse(symbols: List[str]) -> Dict[str, float]:
     """
-    High-speed Live Price Fetcher bypassing delays by using yfinance fast_info.
+    High-speed Live Price Fetcher.
+    1. Tries nsepython (Direct NSE, but often blocked on cloud).
+    2. Tries Yahoo Finance BSE (.BO) with 1-min intervals (Real-time live data hack!).
+    3. Tries Yahoo Finance NSE (.NS) with 1-min intervals (15-min delayed).
     """
-    prices = {}
-    
-    # 1. MUST use a fresh session to bypass any SQLite caches 
-    # that the main scanner might be using.
-    fresh_session = requests.Session()
-    
-    def _get_price(sym):
-        clean = _clean_symbol(str(sym))
-        if not clean:
-            return clean, None
-        try:
-            ticker = yf.Ticker(f"{clean}.NS", session=fresh_session)
-            # 2. 'fast_info' hits a different API endpoint that is 
-            # significantly closer to real-time than standard .history()
-            price = ticker.fast_info['lastPrice']
-            return clean, round(price, 2)
-        except Exception:
-            return clean, None
-
+    out: Dict[str, float] = {}
     seen = set()
-    unique_symbols = []
-    for s in symbols:
-        c = _clean_symbol(str(s))
-        if c and c not in seen:
-            unique_symbols.append(c)
-            seen.add(c)
+    
+    for raw in symbols[:30]:  # Cap at 30 to avoid rate limits
+        clean = _clean_symbol(str(raw))
+        if not clean or clean in seen:
+            continue
+        seen.add(clean)
+        
+        # 1. Try NSEPython (Super fast, but often blocked by Railway/Cloud firewalls)
+        try:
+            from nsepython import nse_quote_ltp
+            ltp = nse_quote_ltp(clean)
+            if ltp:
+                out[clean] = round(float(ltp), 2)
+                continue 
+        except Exception:
+            pass 
 
-    # 3. Fire all requests simultaneously so the WebSocket doesn't bottleneck
-    with ThreadPoolExecutor(max_workers=15) as executor:
-        results = executor.map(_get_price, unique_symbols[:30]) # Cap at 30 to avoid rate limits
-        for sym, price in results:
-            if price is not None:
-                prices[sym] = price
-                
-    return prices
+        # 2. THE FIX: Fallback to Yahoo Finance Bombay Stock Exchange (.BO)
+        # BSE provides real-time data to Yahoo, bypassing the 15-minute NSE delay!
+        try:
+            ticker_bse = f"{clean}.BO"
+            t_bse = yf.Ticker(ticker_bse)
+            hist = t_bse.history(period="1d", interval="1m") # 1-min pulls the live tick
+            if hist is not None and not hist.empty and "Close" in hist.columns:
+                last_price = float(hist["Close"].iloc[-1])
+                out[clean] = round(last_price, 2)
+                continue # Success! Move to next stock.
+        except Exception:
+            pass
+
+        # 3. Final Fallback to Yahoo Finance NSE (.NS) (Has a 15 min delay)
+        try:
+            ticker_nse = f"{clean}.NS"
+            t_nse = yf.Ticker(ticker_nse)
+            hist = t_nse.history(period="1d", interval="1m")
+            if hist is not None and not hist.empty and "Close" in hist.columns:
+                last_price = float(hist["Close"].iloc[-1])
+                out[clean] = round(last_price, 2)
+        except Exception as e:
+            print(f"[LIVE FETCH ERROR] for {clean}: {e}")
+            continue
+            
+    return out
 
 # ─────────────────────────────────────────────────────────────
 # DEFAULT PROVIDER
