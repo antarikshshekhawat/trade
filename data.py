@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from io import StringIO
 from typing import Dict, List
 import time
+import warnings
 
 import pandas as pd
 import yfinance as yf
@@ -164,13 +165,15 @@ class MarketDataProvider(ABC):
 class YFinanceDataProvider(MarketDataProvider):
 
     def _download(self, ticker: str, period: str, interval: str) -> pd.DataFrame:
-        return yf.download(
-            ticker,
-            period=period,
-            interval=interval,
-            progress=False,
-            threads=False,
-        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return yf.download(
+                ticker,
+                period=period,
+                interval=interval,
+                progress=False,
+                threads=False,
+            )
 
     def get_ohlc(self, symbol: str, period="8mo", interval="1d") -> pd.DataFrame:
         ticker = _to_nse_ticker(symbol)
@@ -219,54 +222,65 @@ class BrokerRealtimeProvider(MarketDataProvider):
 
 def fetch_last_prices_nse(symbols: List[str]) -> Dict[str, float]:
     """
-    High-speed Live Price Fetcher.
-    1. Tries nsepython (Direct NSE, but often blocked on cloud).
-    2. Tries Yahoo Finance BSE (.BO) with 1-min intervals (Real-time live data hack!).
-    3. Tries Yahoo Finance NSE (.NS) with 1-min intervals (15-min delayed).
+    High-speed BULK Live Price Fetcher.
+    Combines all tickers into a single request. 
+    1. Tries Yahoo Finance BSE (.BO) for real-time live data in bulk.
+    2. Falls back to NSE (.NS) bulk if needed.
     """
     out: Dict[str, float] = {}
-    seen = set()
     
-    for raw in symbols[:30]:  # Cap at 30 to avoid rate limits
-        clean = _clean_symbol(str(raw))
-        if not clean or clean in seen:
-            continue
-        seen.add(clean)
-        
-        # 1. Try NSEPython (Super fast, but often blocked by Railway/Cloud firewalls)
-        try:
-            from nsepython import nse_quote_ltp
-            ltp = nse_quote_ltp(clean)
-            if ltp:
-                out[clean] = round(float(ltp), 2)
-                continue 
-        except Exception:
-            pass 
+    # Clean and cap symbols to avoid massive payloads
+    valid_symbols = list(set([_clean_symbol(str(s)) for s in symbols if _clean_symbol(str(s))][:50]))
+    if not valid_symbols:
+        return out
 
-        # 2. THE FIX: Fallback to Yahoo Finance Bombay Stock Exchange (.BO)
-        # BSE provides real-time data to Yahoo, bypassing the 15-minute NSE delay!
-        try:
-            ticker_bse = f"{clean}.BO"
-            t_bse = yf.Ticker(ticker_bse)
-            hist = t_bse.history(period="1d", interval="1m") # 1-min pulls the live tick
-            if hist is not None and not hist.empty and "Close" in hist.columns:
-                last_price = float(hist["Close"].iloc[-1])
-                out[clean] = round(last_price, 2)
-                continue # Success! Move to next stock.
-        except Exception:
-            pass
+    # 1. First, attempt bulk fetch using BSE (.BO) to get true real-time prices
+    tickers_bo = " ".join([f"{s}.BO" for s in valid_symbols])
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            df_bo = yf.download(tickers_bo, period="1d", interval="1m", progress=False)
 
-        # 3. Final Fallback to Yahoo Finance NSE (.NS) (Has a 15 min delay)
+        if not df_bo.empty:
+            if isinstance(df_bo.columns, pd.MultiIndex):
+                for symbol in valid_symbols:
+                    ticker = f"{symbol}.BO"
+                    if ('Close', ticker) in df_bo.columns:
+                        series = df_bo['Close'][ticker].dropna()
+                        if not series.empty:
+                            out[symbol] = round(float(series.iloc[-1]), 2)
+            else:
+                if 'Close' in df_bo.columns:
+                    series = df_bo['Close'].dropna()
+                    if not series.empty:
+                        out[valid_symbols[0]] = round(float(series.iloc[-1]), 2)
+    except Exception as e:
+        print(f"[LIVE FETCH ERROR] Bulk BSE fetch failed: {e}")
+
+    # 2. Check if any symbols failed on BSE. If so, fallback to NSE (.NS) for the missing ones.
+    missing_symbols = [s for s in valid_symbols if s not in out]
+    if missing_symbols:
+        tickers_ns = " ".join([f"{s}.NS" for s in missing_symbols])
         try:
-            ticker_nse = f"{clean}.NS"
-            t_nse = yf.Ticker(ticker_nse)
-            hist = t_nse.history(period="1d", interval="1m")
-            if hist is not None and not hist.empty and "Close" in hist.columns:
-                last_price = float(hist["Close"].iloc[-1])
-                out[clean] = round(last_price, 2)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                df_ns = yf.download(tickers_ns, period="1d", interval="1m", progress=False)
+
+            if not df_ns.empty:
+                if isinstance(df_ns.columns, pd.MultiIndex):
+                    for symbol in missing_symbols:
+                        ticker = f"{symbol}.NS"
+                        if ('Close', ticker) in df_ns.columns:
+                            series = df_ns['Close'][ticker].dropna()
+                            if not series.empty:
+                                out[symbol] = round(float(series.iloc[-1]), 2)
+                else:
+                    if 'Close' in df_ns.columns:
+                        series = df_ns['Close'].dropna()
+                        if not series.empty:
+                            out[missing_symbols[0]] = round(float(series.iloc[-1]), 2)
         except Exception as e:
-            print(f"[LIVE FETCH ERROR] for {clean}: {e}")
-            continue
+            print(f"[LIVE FETCH ERROR] Bulk NSE fallback failed: {e}")
             
     return out
 
