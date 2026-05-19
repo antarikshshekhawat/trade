@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import urllib.request
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -11,7 +10,7 @@ import warnings
 
 import pandas as pd
 import yfinance as yf
-from nsepython import nse_quote_ltp  # High-speed live data fetcher
+from nsepython import nse_quote_ltp  # Kept for compatibility
 
 # ─────────────────────────────────────────────────────────────
 # INDEX DATA SOURCES
@@ -41,6 +40,7 @@ FALLBACK_UNIVERSE = {
 }
 
 FALLBACK_IPO_STOCKS = [
+    # Focus list for recent/current IPO-era names (2024-2026 watchlist universe)
     "HYUNDAI","BAJAJHFL","OLALEC","PREMIERENE","UNIECOM","TBO",
     "AWFIS","KRN","VRAJ","GODIGIT","SWIGGY","MOBIKWIK",
     "NSDL","WAAREEENER","JUNIPER","AZAD","KAYNES","TATATECH",
@@ -49,9 +49,6 @@ FALLBACK_IPO_STOCKS = [
 
 ALL_NSE_URL = "https://archives.nseindia.com/content/equities/EQUITY_L.csv"
 _ALL_NSE_CACHE: Dict[str, object] = {"symbols": [], "expires_at": 0.0}
-
-# MEMORY CACHE TO STOP SWITCHBACKING
-_LTP_CACHE: Dict[str, float] = {}
 
 # ─────────────────────────────────────────────────────────────
 # HELPERS
@@ -89,6 +86,7 @@ def _load_index_symbols(url: str) -> List[str]:
     return []
 
 def load_all_nse_symbols() -> List[str]:
+    """Load tradable NSE symbols for global ticker search (cached for 6h)."""
     now = time.time()
     if _ALL_NSE_CACHE["symbols"] and now < float(_ALL_NSE_CACHE["expires_at"]):
         return _ALL_NSE_CACHE["symbols"]  # type: ignore[return-value]
@@ -126,13 +124,16 @@ def load_all_nse_symbols() -> List[str]:
 
 def build_stock_universe() -> Dict[str, List[str]]:
     universe = {}
+
     for category, url in INDEX_URLS.items():
         live = _load_index_symbols(url)
+
         if live:
             universe[category] = live
         else:
             print(f"[WARNING] Using fallback for {category}")
             universe[category] = FALLBACK_UNIVERSE[category]
+
     universe["ipo"] = FALLBACK_IPO_STOCKS
     return universe
 
@@ -160,113 +161,96 @@ class MarketDataProvider(ABC):
         pass
 
 class YFinanceDataProvider(MarketDataProvider):
+
     def _download(self, ticker: str, period: str, interval: str) -> pd.DataFrame:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             return yf.download(
-                ticker, period=period, interval=interval, progress=False, threads=False,
+                ticker,
+                period=period,
+                interval=interval,
+                progress=False,
+                threads=False,
             )
 
     def get_ohlc(self, symbol: str, period="8mo", interval="1d") -> pd.DataFrame:
         ticker = _to_nse_ticker(symbol)
-        if not ticker: return pd.DataFrame()
+
+        if not ticker:
+            return pd.DataFrame()
+
         for attempt in range(3):
             try:
                 df = self._download(ticker, period, interval)
-                if df.empty: continue
+
+                if df.empty:
+                    continue
+
                 if isinstance(df.columns, pd.MultiIndex):
                     df.columns = [str(c[0]).lower() for c in df.columns]
                 else:
                     df.columns = [str(c).lower() for c in df.columns]
+
                 required = ["open", "high", "low", "close", "volume"]
-                if not all(col in df.columns for col in required): return pd.DataFrame()
+
+                if not all(col in df.columns for col in required):
+                    return pd.DataFrame()
+
                 df = df[required].dropna()
-                if df.empty: return pd.DataFrame()
+
+                if df.empty:
+                    return pd.DataFrame()
+
                 return df
+
             except Exception as e:
                 print(f"[YFINANCE ERROR] {ticker} attempt {attempt+1}: {e}")
                 time.sleep(1)
+
         return pd.DataFrame()
 
 class BrokerRealtimeProvider(MarketDataProvider):
     def get_ohlc(self, symbol: str, period="1d", interval="1m") -> pd.DataFrame:
         return get_default_provider().get_ohlc(symbol, period, interval)
 
+
 # ─────────────────────────────────────────────────────────────
-# ULTIMATE TRADINGVIEW RAW API FETCHER WITH CACHE
+# ULTIMATE BULK FETCH LOGIC (PURE YAHOO FINANCE)
 # ─────────────────────────────────────────────────────────────
 
 def fetch_last_prices_nse(symbols: List[str]) -> Dict[str, float]:
     """
-    High-speed BULK Live Price Fetcher.
-    Uses TradingView first. Caches the result to prevent switchbacking.
+    High-speed BULK Live Price Fetcher using pure Yahoo Finance.
+    Using ONLY ONE data source guarantees ZERO switchbacking.
+    Works flawlessly on PythonAnywhere.
     """
     out: Dict[str, float] = {}
     valid_symbols = list(set([_clean_symbol(str(s)) for s in symbols if _clean_symbol(str(s))][:100]))
     if not valid_symbols:
         return out
 
-    # 1. Query TradingView Servers Directly
+    tickers_ns = " ".join([f"{s}.NS" for s in valid_symbols])
     try:
-        tv_tickers = [f"NSE:{s}" for s in valid_symbols]
-        url = "https://scanner.tradingview.com/india/scan"
-        payload = {
-            "symbols": { "tickers": tv_tickers, "query": { "types": [] } },
-            "columns": ["close"] 
-        }
-        req = urllib.request.Request(
-            url, data=json.dumps(payload).encode('utf-8'), 
-            headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'},
-            method='POST'
-        )
-        with urllib.request.urlopen(req, timeout=5) as response:
-            resp_data = json.loads(response.read().decode('utf-8'))
-            for item in resp_data.get('data', []):
-                ticker_name = item.get('s', '').replace('NSE:', '')
-                close_price = item.get('d', [0])[0]
-                if close_price:
-                    out[ticker_name] = round(float(close_price), 2)
-                    _LTP_CACHE[ticker_name] = out[ticker_name] # LOCK PRICE IN MEMORY
-    except Exception as e:
-        print(f"[LIVE FETCH ERROR] TV Bulk fetch failed: {e}")
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            # Fetch 1-day data with 1-minute intervals to get the live tick
+            df_ns = yf.download(tickers_ns, period="1d", interval="1m", progress=False)
 
-    # 2. Check Cache before falling back to yfinance (STOPS SWITCHBACKING)
-    missing_symbols = [s for s in valid_symbols if s not in out]
-    yfinance_needed = []
-    
-    for s in missing_symbols:
-        if s in _LTP_CACHE:
-            out[s] = _LTP_CACHE[s] # Restore stable price from cache
-        else:
-            yfinance_needed.append(s)
-
-    # 3. YFinance Fallback ONLY for unseen symbols
-    if yfinance_needed:
-        tickers_bo = " ".join([f"{s}.BO" for s in yfinance_needed]) 
-        try:
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                df_bo = yf.download(tickers_bo, period="1d", interval="1m", progress=False)
-
-            if not df_bo.empty:
-                if isinstance(df_bo.columns, pd.MultiIndex):
-                    for symbol in yfinance_needed:
-                        ticker = f"{symbol}.BO"
-                        if ('Close', ticker) in df_bo.columns:
-                            series = df_bo['Close'][ticker].dropna()
-                            if not series.empty:
-                                price = round(float(series.iloc[-1]), 2)
-                                out[symbol] = price
-                                _LTP_CACHE[symbol] = price
-                else:
-                    if 'Close' in df_bo.columns:
-                        series = df_bo['Close'].dropna()
+        if not df_ns.empty:
+            if isinstance(df_ns.columns, pd.MultiIndex):
+                for symbol in valid_symbols:
+                    ticker = f"{symbol}.NS"
+                    if ('Close', ticker) in df_ns.columns:
+                        series = df_ns['Close'][ticker].dropna()
                         if not series.empty:
-                            price = round(float(series.iloc[-1]), 2)
-                            out[yfinance_needed[0]] = price
-                            _LTP_CACHE[yfinance_needed[0]] = price
-        except Exception:
-            pass
+                            out[symbol] = round(float(series.iloc[-1]), 2)
+            else:
+                if 'Close' in df_ns.columns:
+                    series = df_ns['Close'].dropna()
+                    if not series.empty:
+                        out[valid_symbols[0]] = round(float(series.iloc[-1]), 2)
+    except Exception as e:
+        print(f"[LIVE FETCH ERROR] Bulk YF fetch failed: {e}")
             
     return out
 
