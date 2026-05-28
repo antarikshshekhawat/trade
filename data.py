@@ -22,25 +22,30 @@ INDEX_URLS = {
     "smallcap": "https://niftyindices.com/IndexConstituent/ind_niftysmallcap100list.csv",
 }
 
+# EXPANDED UNIVERSE FOR PYTHONANYWHERE BLOCK BYPASS (150+ Stocks)
 FALLBACK_UNIVERSE = {
     "largecap": [
-        "RELIANCE","TCS","INFY","HDFCBANK","ICICIBANK","LT","SBIN",
-        "ITC","AXISBANK","BAJFINANCE","ASIANPAINT","KOTAKBANK",
-        "MARUTI","HCLTECH","WIPRO","ULTRACEMCO","SUNPHARMA",
-        "TITAN","NTPC","POWERGRID"
+        "RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "BHARTIARTL", "SBIN", "INFY", "LICI", "ITC", "HINDUNILVR",
+        "LT", "BAJFINANCE", "HCLTECH", "MARUTI", "SUNPHARMA", "TATAMOTORS", "M&M", "KOTAKBANK", "ONGC", "TATASTEEL",
+        "COALINDIA", "NTPC", "AXISBANK", "POWERGRID", "ASIANPAINT", "BAJAJFINSV", "TITAN", "ADANIPORTS", "ULTRACEMCO", "WIPRO",
+        "JSWSTEEL", "ZOMATO", "GRASIM", "TECHM", "BAJAJ-AUTO", "HINDALCO", "TRENT", "LTIM", "NESTLEIND", "SIEMENS",
+        "DRREDDY", "HAL", "IOC", "CIPLA", "INDUSINDBK", "EICHERMOT", "APOLLOHOSP", "PIDILITIND", "BRITANNIA", "BEL"
     ],
     "midcap": [
-        "POLYCAB","PERSISTENT","COFORGE","MPHASIS","BHEL",
-        "NHPC","IDFCFIRSTB","LUPIN","INDHOTEL","SUPREMEIND"
+        "POLYCAB", "PERSISTENT", "COFORGE", "MPHASIS", "BHEL", "NHPC", "IDFCFIRSTB", "LUPIN", "INDHOTEL", "SUPREMEIND",
+        "ASTRAL", "CGPOWER", "CUMMINSIND", "DIXON", "ESCORTS", "GODREJPROP", "KPITTECH", "MAXHEALTH", "MAZDOCK", "OFSS",
+        "PAGEIND", "PAYTM", "PIIND", "PRESTIGE", "RECLTD", "SAIL", "TATACOMM", "TORNTPOWER", "TVSMOTOR",
+        "UBL", "UCOBANK", "VOLTAS", "YESBANK", "ZEEL", "APOLLOTYRE", "ASHOKLEY", "BALKRISIND", "BANDHANBNK", "BANKBARODA"
     ],
     "smallcap": [
-        "IRB","JUBLINGREA","FSL","KNRCON","RKFORGE",
-        "RAIN","TRITURBINE","FCL","WELCORP","KPIGREEN"
+        "IRB", "JUBLINGREA", "FSL", "KNRCON", "RKFORGE", "RAIN", "TRITURBINE", "FCL", "WELCORP", "KPIGREEN",
+        "ANGELONE", "ANURAS", "BEML", "BLS", "BSOFT", "CDSL", "CEATLTD", "CENTURYPLY", "CERA", "CHAMBLFERT",
+        "CHEMPLASTS", "CHOLAFIN", "CITYUNION", "CLEAN", "COCHINSHIP", "CREDITACC", "CROMPTON", "CSBBANK", "CYIENT", "DATAPATTNS",
+        "DEEPAKNTR", "DELHIVERY", "DEVYANI", "ECLERX", "EIDPARRY", "EQUITASBNK", "ERIS", "EXIDEIND", "FACT", "FINEORG"
     ],
 }
 
 FALLBACK_IPO_STOCKS = [
-    # Focus list for recent/current IPO-era names (2024-2026 watchlist universe)
     "HYUNDAI","BAJAJHFL","OLALEC","PREMIERENE","UNIECOM","TBO",
     "AWFIS","KRN","VRAJ","GODIGIT","SWIGGY","MOBIKWIK",
     "NSDL","WAAREEENER","JUNIPER","AZAD","KAYNES","TATATECH",
@@ -86,7 +91,6 @@ def _load_index_symbols(url: str) -> List[str]:
     return []
 
 def load_all_nse_symbols() -> List[str]:
-    """Load tradable NSE symbols for global ticker search (cached for 6h)."""
     now = time.time()
     if _ALL_NSE_CACHE["symbols"] and now < float(_ALL_NSE_CACHE["expires_at"]):
         return _ALL_NSE_CACHE["symbols"]  # type: ignore[return-value]
@@ -105,7 +109,7 @@ def load_all_nse_symbols() -> List[str]:
                 symbols = sorted(list(set(_clean_symbol(x) for x in df[col].dropna() if _clean_symbol(x))))
                 break
     except Exception as e:
-        print(f"[DATA ERROR] Failed to load full NSE list: {e}")
+        print(f"[DATA ERROR] Failed to load full NSE list (PythonAnywhere Blocked): {e}")
 
     if not symbols:
         uni = build_stock_universe()
@@ -213,17 +217,7 @@ class BrokerRealtimeProvider(MarketDataProvider):
     def get_ohlc(self, symbol: str, period="1d", interval="1m") -> pd.DataFrame:
         return get_default_provider().get_ohlc(symbol, period, interval)
 
-
-# ─────────────────────────────────────────────────────────────
-# ULTIMATE BULK FETCH LOGIC (PURE YAHOO FINANCE)
-# ─────────────────────────────────────────────────────────────
-
 def fetch_last_prices_nse(symbols: List[str]) -> Dict[str, float]:
-    """
-    High-speed BULK Live Price Fetcher using pure Yahoo Finance.
-    Using ONLY ONE data source guarantees ZERO switchbacking.
-    Works flawlessly on PythonAnywhere.
-    """
     out: Dict[str, float] = {}
     valid_symbols = list(set([_clean_symbol(str(s)) for s in symbols if _clean_symbol(str(s))][:100]))
     if not valid_symbols:
@@ -233,7 +227,6 @@ def fetch_last_prices_nse(symbols: List[str]) -> Dict[str, float]:
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            # Fetch 1-day data with 1-minute intervals to get the live tick
             df_ns = yf.download(tickers_ns, period="1d", interval="1m", progress=False)
 
         if not df_ns.empty:
