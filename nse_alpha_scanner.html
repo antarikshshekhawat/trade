@@ -274,7 +274,6 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .metric-box .k { font-size: 8px; color: var(--text-muted); letter-spacing: 0.8px; font-family: 'Inter', sans-serif;}
 .metric-box .v { margin-top: 4px; font-size: 12px; font-weight: 800; line-height: 1.3; }
 
-/* Styles for percentage spans in metrics */
 .metric-box .v span.pct { font-size: 9px; margin-left: 2px; }
 .metric-box .v span.pct.up { color: #4ade80; }
 .metric-box .v span.pct.down { color: #f87171; }
@@ -286,15 +285,10 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .metric-box:nth-child(5) .v { color: #d8b4fe; }
 
 .risk-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 7px; }
-
-/* FIX: Highly visible Risk Chips even when inactive */
 .risk-chip { 
     font-size: 9px; font-weight: 700; padding: 6px 4px; border-radius: 6px; 
-    border: 1px solid rgba(148, 163, 184, 0.4); 
-    background: rgba(15, 23, 35, 0.8); 
-    color: #cbd5e1; 
-    text-align: center; white-space: nowrap; 
-    overflow: hidden; text-overflow: ellipsis; font-family: 'Inter', sans-serif; 
+    border: 1px solid rgba(148, 163, 184, 0.4); background: rgba(15, 23, 35, 0.8); 
+    color: #cbd5e1; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: 'Inter', sans-serif; 
 }
 .risk-chip.active { color: #f8fafc; border-color: transparent; }
 .risk-chip.low.active { background: linear-gradient(135deg, #4ade80, #22d3ee); box-shadow: 0 0 10px rgba(34,211,238,0.2);}
@@ -353,32 +347,7 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .sector-row .sp.down { color: #f87171; }
 .sector-empty { padding: 24px; font-size: 12px; color: var(--text-muted); text-align: center; }
 
-/* My trades form */
-.my-trade-form { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
-.my-trade-form input { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.2); background: rgba(0,0,0,0.25); font-size: 12px; font-family: 'Inter', sans-serif; transition: all 0.3s;}
-.my-trade-form input:focus { border-color: var(--all); box-shadow: 0 0 8px rgba(14, 165, 233, 0.3); transform: translateY(-1px);}
-.btn-add-trade { padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; background: linear-gradient(135deg, #22d3ee, #6366f1); color: #0a0a12; border: none; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.2s;}
-.btn-add-trade:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(34, 211, 238, 0.3);}
-.btn-add-trade:active { transform: scale(0.95); }
-
-/* Position Size Feedback */
-.pos-size-result { font-size: 11px; color: var(--text-dim); padding: 2px 4px; font-family: 'JetBrains Mono', monospace;}
-.pos-size-result span { color: #4ade80; font-weight: bold;}
-
-#my-trades-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; max-height: 220px; overflow-y: auto; font-family: 'Inter', sans-serif; }
-.my-trade-row { font-size: 11px; padding: 10px; border-radius: 10px; background: rgba(0,0,0,0.2); border: 1px solid rgba(148, 163, 184, 0.12); position: relative; transition: all 0.2s;}
-.my-trade-row:hover { background: rgba(255,255,255,0.05); transform: translateX(2px);}
-.my-trade-row .t-name { font-weight: 800; font-size: 12px; letter-spacing: 0.04em; }
-.my-trade-row .t-qty { color: #38bdf8; font-weight: 700; margin-left: 6px; }
-.my-trade-row .t-line { color: var(--text-muted); margin-top: 4px; font-family: 'JetBrains Mono', monospace !important; }
-.my-trade-row .t-status { position: absolute; top: 8px; right: 8px; font-size: 9px; font-weight: 800; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; font-family: 'Inter', sans-serif;}
-.st-open { color: #94a3b8; border: 1px solid rgba(148,163,184,0.3); }
-.st-tg { color: #4ade80; border: 1px solid rgba(74,222,128,0.4); background: rgba(74,222,128,0.1); }
-.st-sl { color: #f87171; border: 1px solid rgba(248,113,113,0.4); background: rgba(248,113,113,0.1); }
-.btn-del-trade { margin-top: 6px; font-size: 10px; color: var(--text-muted); text-decoration: underline; cursor: pointer; background: none; border: none; padding: 0; transition: color 0.2s;}
-.btn-del-trade:hover { color: var(--loss); }
-
-/* Modals & Toasts */
+/* Modals */
 .chart-modal { position: fixed; inset: 0; z-index: 9999; background: rgba(3, 6, 15, 0.8); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; padding: 24px; font-family: 'Inter', sans-serif;}
 .chart-modal.open { display: flex; animation: modalFadeIn 0.3s ease; }
 @keyframes modalFadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
@@ -1066,6 +1035,33 @@ function buildCard(sig, inWatch, index = 0) {
       else if (slPct < -6.0) highRiskActive = true;
   }
 
+  // Hide the entire metrics section if it's purely a custom tracked stock
+  let cardContentHtml = '';
+  if (sig._isCustom && !sig._myTrade) {
+      cardContentHtml = `
+      <div style="padding:16px; margin-top:14px; text-align:center; background:rgba(255,255,255,0.02); border:1px dashed rgba(148,163,184,0.2); border-radius:8px; font-size:11px; color:var(--text-dim); font-family:var(--font-sans);">
+          Tracking live price.<br>To set Entry/SL/Target, use the <b>Plan Trades</b> menu on the left.
+      </div>`;
+  } else {
+      cardContentHtml = `
+      <div class="c-metrics-grid">
+        <div class="metric-box entry"><div class="k">ENTRY</div><div class="v">${entry.toFixed(2)}</div></div>
+        <div class="metric-box slstop"><div class="k">STOP LOSS</div><div class="v">${sl.toFixed(2)}<br><span class="pct down">(${slPct.toFixed(2)}%)</span></div></div>
+        <div class="metric-box tgt"><div class="k">TARGET</div><div class="v">${target.toFixed(2)}<br><span class="pct up">(+${targetPct.toFixed(2)}%)</span></div></div>
+        <div class="metric-box lastclose"><div class="k">LAST CLOSE</div><div class="v">${Number(lastClose).toFixed(2)}</div></div>
+        <div class="metric-box rr"><div class="k">RISK:REWARD</div><div class="v">${rrText}</div></div>
+      </div>
+      <div class="risk-columns">
+        <div class="risk-chip low ${lowRiskActive ? 'active' : ''}">Low Risk · High Reward</div>
+        <div class="risk-chip high ${highRiskActive ? 'active' : ''}">High Risk · High Reward</div>
+      </div>
+      <div class="c-row-3" style="margin-top:2px; font-family: var(--font-sans);">Duration: ${sig.duration || 'Mid-term'}</div>
+      <div class="c-row-5">
+        <div class="prog-labels"><span class="prog-lbl-sl">SL ${sl.toFixed(2)}</span><span class="prog-lbl-tg">Target ${target.toFixed(2)}</span></div>
+        <div class="prog-bar-container"><div class="prog-fill sl" style="width: ${slW}%"></div><div class="prog-marker" style="left: ${entryPct}%"></div><div class="prog-fill target" style="width: ${tgtW}%"></div></div>
+      </div>`;
+  }
+
   div.innerHTML = `
     <div class="c-row-1"><div class="c-ticker-top">${sig.ticker}</div><div class="c-pattern-top">${sig.pattern || 'Setup'}</div></div>
     <div class="c-row-2"><div class="c-badges c-badges-cluster"><span class="badge ${badgeClass} cat-wide">${labelText}</span>${statusBadge}</div></div>
@@ -1077,22 +1073,8 @@ function buildCard(sig, inWatch, index = 0) {
       </div>
     </div>
 
-    <div class="c-metrics-grid">
-      <div class="metric-box entry"><div class="k">ENTRY</div><div class="v">${entry.toFixed(2)}</div></div>
-      <div class="metric-box slstop"><div class="k">STOP LOSS</div><div class="v">${sl.toFixed(2)}<br><span class="pct down">(${slPct.toFixed(2)}%)</span></div></div>
-      <div class="metric-box tgt"><div class="k">TARGET</div><div class="v">${target.toFixed(2)}<br><span class="pct up">(+${targetPct.toFixed(2)}%)</span></div></div>
-      <div class="metric-box lastclose"><div class="k">LAST CLOSE</div><div class="v">${Number(lastClose).toFixed(2)}</div></div>
-      <div class="metric-box rr"><div class="k">RISK:REWARD</div><div class="v">${rrText}</div></div>
-    </div>
-    <div class="risk-columns">
-      <div class="risk-chip low ${lowRiskActive ? 'active' : ''}">Low Risk · High Reward</div>
-      <div class="risk-chip high ${highRiskActive ? 'active' : ''}">High Risk · High Reward</div>
-    </div>
-    <div class="c-row-3" style="margin-top:2px; font-family: var(--font-sans);">Duration: ${sig.duration || 'Mid-term'}</div>
-    <div class="c-row-5">
-      <div class="prog-labels"><span class="prog-lbl-sl">SL ${sl.toFixed(2)}</span><span class="prog-lbl-tg">Target ${target.toFixed(2)}</span></div>
-      <div class="prog-bar-container"><div class="prog-fill sl" style="width: ${slW}%"></div><div class="prog-marker" style="left: ${entryPct}%"></div><div class="prog-fill target" style="width: ${tgtW}%"></div></div>
-    </div>
+    ${cardContentHtml}
+    
     <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center;">
        ${actionBtnHtml}
        <button class="chart-launch" data-chart="${sig.ticker}">Chart</button>
@@ -1182,7 +1164,7 @@ document.querySelectorAll('.nav-item[data-view]').forEach((el) => {
 const searchInput = document.getElementById('search-input'); 
 searchInput.addEventListener('input', (e) => { searchQuery = e.target.value.trim(); clearTimeout(searchDebounce); searchDebounce = setTimeout(() => fetchTickerSuggestions(searchQuery), 180); renderGrid(); });
 
-// ADDED: Search directly via Enter key
+// Search directly via Enter key
 searchInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
         const val = e.target.value.trim().toUpperCase();
