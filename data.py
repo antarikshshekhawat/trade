@@ -1,8 +1,6 @@
-from __future__ import annotations
+from __future annotations
 
-import json
 import urllib.request
-import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from io import StringIO
@@ -12,10 +10,10 @@ import warnings
 
 import pandas as pd
 import yfinance as yf
-from nsepython import nse_quote_ltp  
+from nsepython import nse_quote_ltp  # Kept for compatibility
 
 # ─────────────────────────────────────────────────────────────
-# INDEX DATA SOURCES & MASSIVE FALLBACK UNIVERSE
+# INDEX DATA SOURCES
 # ─────────────────────────────────────────────────────────────
 
 INDEX_URLS = {
@@ -24,28 +22,28 @@ INDEX_URLS = {
     "smallcap": "https://niftyindices.com/IndexConstituent/ind_niftysmallcap100list.csv",
 }
 
-# EXPANDED UNIVERSE: Guarantees 150+ signals even if PythonAnywhere blocks the NSE website
+# MASSIVE HARDCODED UNIVERSE (140+ STOCKS) TO BYPASS PYTHONANYWHERE PROXY BLOCKS
 FALLBACK_UNIVERSE = {
     "largecap": [
         "RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "BHARTIARTL", "SBIN", "INFY", "LICI", "ITC", "HINDUNILVR",
         "LT", "BAJFINANCE", "HCLTECH", "MARUTI", "SUNPHARMA", "TATAMOTORS", "M&M", "KOTAKBANK", "ONGC", "TATASTEEL",
-        "COALINDIA", "NTPC", "AXISBANK", "POWERGRID", "ASIANPAINT", "BAJAJFINSV", "TITAN", "ADANIPORTS", "ULTRACEMCO", "WIPRO",
+        "COALINDIA", "NTPC", "AXISBANK", "POWERGRID", "ASIANPAINT", "BAJAJFIXSV", "TITAN", "ADANIPORTS", "ULTRACEMCO", "WIPRO",
         "JSWSTEEL", "ZOMATO", "GRASIM", "TECHM", "BAJAJ-AUTO", "HINDALCO", "TRENT", "LTIM", "NESTLEIND", "SIEMENS",
         "DRREDDY", "HAL", "IOC", "CIPLA", "INDUSINDBK", "EICHERMOT", "APOLLOHOSP", "PIDILITIND", "BRITANNIA", "BEL"
     ],
     "midcap": [
         "POLYCAB", "PERSISTENT", "COFORGE", "MPHASIS", "BHEL", "NHPC", "IDFCFIRSTB", "LUPIN", "INDHOTEL", "SUPREMEIND",
         "ASTRAL", "CGPOWER", "CUMMINSIND", "DIXON", "ESCORTS", "GODREJPROP", "KPITTECH", "MAXHEALTH", "MAZDOCK", "OFSS",
-        "PAGEIND", "PAYTM", "PIIND", "PRESTIGE", "RECLTD", "SAIL", "TATACOMM", "TORNTPOWER", "TVSMOTOR",
-        "UBL", "UCOBANK", "VOLTAS", "YESBANK", "ZEEL", "APOLLOTYRE", "ASHOKLEY", "BALKRISIND", "BANDHANBNK", "BANKBARODA",
-        "BHARATFORG", "CANBK", "CHOLAFIN", "CUB", "DALBHARAT", "DEEPAKNTR", "EXIDEIND", "FEDERALBNK", "FSL", "GAIL"
+        "PAGEIND", "PAYTM", "PIIND", "PRESTIGE", "RECLTD", "SAIL", "TATACOMM", "TORNTPOWER", "TVSMOTOR", "VOLTAS",
+        "FEDERALBNK", "AUROPHARMA", "NUMALIGARH", "CONCOR", "OBEROIRLTY", "MUTHOOTFIN", "GMRINFRA", "MAX", "BALKRISIND", "IRCTC",
+        "MRF", "BOSCHLTD", "MPHASIS", "LINDEINDIA", "SUNDARMFIN", "FLUOROCHEM", "DIXON", "SONACOMS", "AWFISS", "SAIL"
     ],
     "smallcap": [
         "IRB", "JUBLINGREA", "FSL", "KNRCON", "RKFORGE", "RAIN", "TRITURBINE", "FCL", "WELCORP", "KPIGREEN",
         "ANGELONE", "ANURAS", "BEML", "BLS", "BSOFT", "CDSL", "CEATLTD", "CENTURYPLY", "CERA", "CHAMBLFERT",
         "CHEMPLASTS", "CHOLAFIN", "CITYUNION", "CLEAN", "COCHINSHIP", "CREDITACC", "CROMPTON", "CSBBANK", "CYIENT", "DATAPATTNS",
         "DEEPAKNTR", "DELHIVERY", "DEVYANI", "ECLERX", "EIDPARRY", "EQUITASBNK", "ERIS", "EXIDEIND", "FACT", "FINEORG",
-        "GLENMARK", "GNFC", "GRANULES", "GUJGASLTD", "HAVELLS", "HINDCOPPER", "HINDPETRO", "HONAUT", "IEX", "IGL"
+        "HFCL", "HUDCO", "IEX", "IRCON", "ITDC", "J&KBANK", "KALYANKJIL", "KARURVYSYA", "RVNL", "SJVN"
     ],
 }
 
@@ -56,15 +54,8 @@ FALLBACK_IPO_STOCKS = [
     "MANKIND","DOMS","IREDA","MEDANTA","LATENTVIEW","NYKAA"
 ]
 
-# Huge dictionary for instant frontend search bar autocompletion
-ALL_POPULAR_SYMBOLS = list(set(
-    FALLBACK_UNIVERSE["largecap"] + FALLBACK_UNIVERSE["midcap"] + FALLBACK_UNIVERSE["smallcap"] + FALLBACK_IPO_STOCKS +
-    ["ATGL", "ADANIENSOL", "ADANIGREEN", "ADANIENT", "ADANIPOWER", "AWL", "JIOFIN", "HDFCLIFE", "VBL", "TATACONSUM", "SHREECEM"]
-))
-
 ALL_NSE_URL = "https://archives.nseindia.com/content/equities/EQUITY_L.csv"
 _ALL_NSE_CACHE: Dict[str, object] = {"symbols": [], "expires_at": 0.0}
-_LTP_CACHE: Dict[str, float] = {} # Stops the prices from bouncing!
 
 # ─────────────────────────────────────────────────────────────
 # HELPERS
@@ -83,16 +74,22 @@ def _to_nse_ticker(symbol: str) -> str:
 
 def _load_index_symbols(url: str) -> List[str]:
     try:
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        req = urllib.request.Request(
+            url, 
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        )
         with urllib.request.urlopen(req, timeout=10) as response:
             raw_csv = response.read().decode("utf-8", errors="ignore")
+
         df = pd.read_csv(StringIO(raw_csv))
+
         for col in ["Symbol", "SYMBOL", "Ticker", "ticker"]:
             if col in df.columns:
                 symbols = [_clean_symbol(x) for x in df[col].dropna()]
                 return sorted(list(set(filter(None, symbols))))
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[DATA ERROR] Failed to load index from {url}: {e}")
+
     return []
 
 def load_all_nse_symbols() -> List[str]:
@@ -102,23 +99,34 @@ def load_all_nse_symbols() -> List[str]:
 
     symbols: List[str] = []
     try:
-        req = urllib.request.Request(ALL_NSE_URL, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=10) as response:
+        req = urllib.request.Request(
+            ALL_NSE_URL,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
+        )
+        with urllib.request.urlopen(req, timeout=15) as response:
             raw_csv = response.read().decode("utf-8", errors="ignore")
         df = pd.read_csv(StringIO(raw_csv))
         for col in ["SYMBOL", "Symbol", "symbol"]:
             if col in df.columns:
                 symbols = sorted(list(set(_clean_symbol(x) for x in df[col].dropna() if _clean_symbol(x))))
                 break
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[DATA ERROR] Full list fetch blocked by server firewall: {e}")
 
     if not symbols:
-        symbols = sorted(ALL_POPULAR_SYMBOLS)
+        uni = build_stock_universe()
+        tmp: List[str] = []
+        for vals in uni.values():
+            tmp.extend(vals)
+        symbols = sorted(list(set(_clean_symbol(x) for x in tmp if _clean_symbol(x))))
 
     _ALL_NSE_CACHE["symbols"] = symbols
     _ALL_NSE_CACHE["expires_at"] = now + (6 * 3600)
     return symbols
+
+# ─────────────────────────────────────────────────────────────
+# BUILD STOCK UNIVERSE
+# ─────────────────────────────────────────────────────────────
 
 def build_stock_universe() -> Dict[str, List[str]]:
     universe = {}
@@ -128,6 +136,7 @@ def build_stock_universe() -> Dict[str, List[str]]:
             universe[category] = live
         else:
             universe[category] = FALLBACK_UNIVERSE[category]
+
     universe["ipo"] = FALLBACK_IPO_STOCKS
     return universe
 
@@ -155,29 +164,47 @@ class MarketDataProvider(ABC):
         pass
 
 class YFinanceDataProvider(MarketDataProvider):
+
     def _download(self, ticker: str, period: str, interval: str) -> pd.DataFrame:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            return yf.download(ticker, period=period, interval=interval, progress=False, threads=False)
+            return yf.download(
+                ticker,
+                period=period,
+                interval=interval,
+                progress=False,
+                threads=False,
+            )
 
     def get_ohlc(self, symbol: str, period="8mo", interval="1d") -> pd.DataFrame:
         ticker = _to_nse_ticker(symbol)
-        if not ticker: return pd.DataFrame()
+        if not ticker:
+            return pd.DataFrame()
+
         for attempt in range(3):
             try:
                 df = self._download(ticker, period, interval)
-                if df.empty: continue
+                if df.empty:
+                    continue
+
                 if isinstance(df.columns, pd.MultiIndex):
                     df.columns = [str(c[0]).lower() for c in df.columns]
                 else:
                     df.columns = [str(c).lower() for c in df.columns]
+
                 required = ["open", "high", "low", "close", "volume"]
-                if not all(col in df.columns for col in required): return pd.DataFrame()
+                if not all(col in df.columns for col in required):
+                    return pd.DataFrame()
+
                 df = df[required].dropna()
-                if df.empty: return pd.DataFrame()
+                if df.empty:
+                    return pd.DataFrame()
+
                 return df
-            except Exception:
+            except Exception as e:
+                print(f"[YFINANCE ERROR] {ticker} attempt {attempt+1}: {e}")
                 time.sleep(1)
+
         return pd.DataFrame()
 
 class BrokerRealtimeProvider(MarketDataProvider):
@@ -185,21 +212,8 @@ class BrokerRealtimeProvider(MarketDataProvider):
         return get_default_provider().get_ohlc(symbol, period, interval)
 
 # ─────────────────────────────────────────────────────────────
-# UNKILLABLE LIVE PRICE FETCHER (TradingView -> Yahoo -> Google)
+# BULK PRICING SCANNER ENGINE
 # ─────────────────────────────────────────────────────────────
-
-def fetch_from_google_finance(symbol: str) -> float:
-    """Ultimate fallback: Scrapes Google Finance if APIs block PythonAnywhere."""
-    try:
-        url = f"https://www.google.com/finance/quote/{symbol}:NSE"
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
-        html = urllib.request.urlopen(req, timeout=4).read().decode('utf-8')
-        match = re.search(r'class="YMlKec fxKbKc"[^>]*>[^\d]*([0-9,.]+)', html)
-        if match:
-            return round(float(match.group(1).replace(',', '')), 2)
-    except Exception:
-        pass
-    return 0.0
 
 def fetch_last_prices_nse(symbols: List[str]) -> Dict[str, float]:
     out: Dict[str, float] = {}
@@ -207,73 +221,29 @@ def fetch_last_prices_nse(symbols: List[str]) -> Dict[str, float]:
     if not valid_symbols:
         return out
 
-    # 1. TradingView
+    tickers_ns = " ".join([f"{s}.NS" for s in valid_symbols])
     try:
-        tv_tickers = [f"NSE:{s}" for s in valid_symbols]
-        url = "https://scanner.tradingview.com/india/scan"
-        payload = {"symbols": {"tickers": tv_tickers, "query": {"types": []}}, "columns": ["close"]}
-        req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}, method='POST')
-        with urllib.request.urlopen(req, timeout=5) as response:
-            resp_data = json.loads(response.read().decode('utf-8'))
-            for item in resp_data.get('data', []):
-                ticker_name = item.get('s', '').replace('NSE:', '')
-                close_price = item.get('d', [0])[0]
-                if close_price:
-                    out[ticker_name] = round(float(close_price), 2)
-                    _LTP_CACHE[ticker_name] = out[ticker_name]
-    except Exception:
-        pass
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            df_ns = yf.download(tickers_ns, period="5d", interval="1d", progress=False)
 
-    # 2. Cache / Yahoo Finance Fallback
-    missing_symbols = [s for s in valid_symbols if s not in out]
-    yfinance_needed = []
-    
-    for s in missing_symbols:
-        if s in _LTP_CACHE:
-            out[s] = _LTP_CACHE[s]
-        else:
-            yfinance_needed.append(s)
-
-    if yfinance_needed:
-        tickers_bo = " ".join([f"{s}.NS" for s in yfinance_needed]) 
-        try:
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                df_ns = yf.download(tickers_bo, period="1d", interval="1m", progress=False)
-
-            if not df_ns.empty:
-                if isinstance(df_ns.columns, pd.MultiIndex):
-                    for symbol in yfinance_needed:
-                        ticker = f"{symbol}.NS"
-                        if ('Close', ticker) in df_ns.columns:
-                            series = df_ns['Close'][ticker].dropna()
-                            if not series.empty:
-                                price = round(float(series.iloc[-1]), 2)
-                                out[symbol] = price
-                                _LTP_CACHE[symbol] = price
-                else:
-                    if 'Close' in df_ns.columns:
-                        series = df_ns['Close'].dropna()
+        if not df_ns.empty:
+            if isinstance(df_ns.columns, pd.MultiIndex):
+                for symbol in valid_symbols:
+                    ticker = f"{symbol}.NS"
+                    if ('Close', ticker) in df_ns.columns:
+                        series = df_ns['Close'][ticker].dropna()
                         if not series.empty:
-                            price = round(float(series.iloc[-1]), 2)
-                            out[yfinance_needed[0]] = price
-                            _LTP_CACHE[yfinance_needed[0]] = price
-        except Exception:
-            pass
-
-    # 3. Google Finance Ultimate Fallback (Bypasses PythonAnywhere blocks unconditionally)
-    still_missing = [s for s in valid_symbols if s not in out]
-    for s in still_missing:
-        price = fetch_from_google_finance(s)
-        if price > 0:
-            out[s] = price
-            _LTP_CACHE[s] = price
+                            out[symbol] = round(float(series.iloc[-1]), 2)
+            else:
+                if 'Close' in df_ns.columns:
+                    series = df_ns['Close'].dropna()
+                    if not series.empty:
+                        out[valid_symbols[0]] = round(float(series.iloc[-1]), 2)
+    except Exception as e:
+        print(f"[LIVE FETCH ERROR] Bulk Yahoo download iteration broke: {e}")
             
     return out
-
-# ─────────────────────────────────────────────────────────────
-# DEFAULT PROVIDER
-# ─────────────────────────────────────────────────────────────
 
 def get_default_provider() -> MarketDataProvider:
     return YFinanceDataProvider()
