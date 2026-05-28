@@ -190,7 +190,7 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .cache-badge { background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: var(--ipo); font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 20px; letter-spacing: 0.5px; font-family: 'Inter', sans-serif;}
 .last-updated { font-size: 11px; color: var(--text-muted); }
 
-.search-container-wrapper { margin-left: auto; position: relative; width: 300px; }
+.search-container-wrapper { margin-left: auto; position: relative; width: 300px; z-index: 9999; }
 .search-container { display: flex; align-items: center; background: rgba(15, 18, 35, 0.85); border: 1px solid rgba(148, 163, 184, 0.15); border-radius: var(--radius); padding: 8px 16px; width: 100%; gap: 10px; transition: all 0.3s ease;}
 .search-container:focus-within { border-color: var(--large); transform: translateY(-1px); box-shadow: 0 5px 15px rgba(34,211,238,0.2);}
 .search-container input { width: 100%; font-size: 13px; color: var(--text); }
@@ -200,7 +200,7 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .custom-search-dropdown {
     position: absolute; top: calc(100% + 8px); left: 0; right: 0; background: rgba(15, 18, 35, 0.95);
     border: 1px solid var(--large); border-radius: 8px; max-height: 250px; overflow-y: auto; 
-    z-index: 1000; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.6); backdrop-filter: blur(12px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6); backdrop-filter: blur(12px);
     opacity: 0; transform: translateY(-10px) scaleY(0.95); transform-origin: top center;
     pointer-events: none; transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
@@ -272,11 +272,9 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
 .metric-box { padding: 8px 6px; border-radius: 8px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(148, 163, 184, 0.12); transition: all 0.2s;}
 .metric-box:hover { background: rgba(255,255,255,0.06); transform: translateY(-2px); border-color: rgba(148,163,184,0.3);}
 .metric-box .k { font-size: 8px; color: var(--text-muted); letter-spacing: 0.8px; font-family: 'Inter', sans-serif;}
-
-/* REMOVED OVERFLOW HIDDEN SO PERCENTAGES WRAP PROPERLY */
 .metric-box .v { margin-top: 4px; font-size: 12px; font-weight: 800; line-height: 1.3; }
 
-/* Adding explicit styles for percentage spans in metrics */
+/* Styles for percentage spans in metrics */
 .metric-box .v span.pct { font-size: 9px; margin-left: 2px; }
 .metric-box .v span.pct.up { color: #4ade80; }
 .metric-box .v span.pct.down { color: #f87171; }
@@ -417,8 +415,8 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
   
   /* Prevent text breaking inside metrics box on mobile */
   .c-metrics-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .metric-box { padding: 8px 6px; } /* Removed overflow hidden */
-  .metric-box .v { font-size: 11px; } /* Removed truncation rules */
+  .metric-box { padding: 8px 6px; } 
+  .metric-box .v { font-size: 11px; } 
   
   /* Slide-out Sidebar Logic */
   #sidebar {
@@ -1060,10 +1058,17 @@ function buildCard(sig, inWatch, index = 0) {
       else actionBtnHtml = `<button class="btn-add ${inWatch ? 'saved' : ''}" title="Toggle Watchlist">${inWatch ? '★' : '+'}</button>`; 
   }
 
+  // Calculate Risk Flags (Frontend fallback if backend missing)
+  let lowRiskActive = Boolean(sig.risk_bucket_low_high);
+  let highRiskActive = Boolean(sig.risk_bucket_high_high);
+  if (!lowRiskActive && !highRiskActive) {
+      if (slPct >= -6.0 && slPct < 0) lowRiskActive = true; 
+      else if (slPct < -6.0) highRiskActive = true;
+  }
+
   div.innerHTML = `
     <div class="c-row-1"><div class="c-ticker-top">${sig.ticker}</div><div class="c-pattern-top">${sig.pattern || 'Setup'}</div></div>
     <div class="c-row-2"><div class="c-badges c-badges-cluster"><span class="badge ${badgeClass} cat-wide">${labelText}</span>${statusBadge}</div></div>
-    ${sig._myTrade ? `<div class="c-row-3" style="font-family: var(--font-sans);">Fixed entry ${(sig.entry || 0).toFixed(2)} · SL ${sl.toFixed(2)} · T ${target.toFixed(2)}</div>` : ''}
     
     <div class="c-row-4">
       <div class="c-row-4-main">
@@ -1080,8 +1085,8 @@ function buildCard(sig, inWatch, index = 0) {
       <div class="metric-box rr"><div class="k">RISK:REWARD</div><div class="v">${rrText}</div></div>
     </div>
     <div class="risk-columns">
-      <div class="risk-chip low ${Boolean(sig.risk_bucket_low_high) ? 'active' : ''}">Low Risk · High Reward</div>
-      <div class="risk-chip high ${Boolean(sig.risk_bucket_high_high) ? 'active' : ''}">High Risk · High Reward</div>
+      <div class="risk-chip low ${lowRiskActive ? 'active' : ''}">Low Risk · High Reward</div>
+      <div class="risk-chip high ${highRiskActive ? 'active' : ''}">High Risk · High Reward</div>
     </div>
     <div class="c-row-3" style="margin-top:2px; font-family: var(--font-sans);">Duration: ${sig.duration || 'Mid-term'}</div>
     <div class="c-row-5">
@@ -1176,6 +1181,14 @@ document.querySelectorAll('.nav-item[data-view]').forEach((el) => {
 
 const searchInput = document.getElementById('search-input'); 
 searchInput.addEventListener('input', (e) => { searchQuery = e.target.value.trim(); clearTimeout(searchDebounce); searchDebounce = setTimeout(() => fetchTickerSuggestions(searchQuery), 180); renderGrid(); });
+
+// ADDED: Search directly via Enter key
+searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        const val = e.target.value.trim().toUpperCase();
+        if (val) { trackCustomStock(val); }
+    }
+});
 
 document.getElementById('btn-refresh').addEventListener('click', () => triggerRefresh());
 document.getElementById('btn-hot-rail').addEventListener('click', () => { 
